@@ -1,1 +1,1 @@
-scp t.tgz NETID@cc-login.campuscluster.illinois.edu:
+scp t.tgz iliak2@cc-login.campuscluster.illinois.edu:
