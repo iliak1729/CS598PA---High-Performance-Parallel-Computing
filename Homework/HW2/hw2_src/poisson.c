@@ -8,6 +8,21 @@
 #define M_PI 3.141592653589793238462643383279502884
 #endif
 
+static void decompose_1d(int n, int rank, int nranks, 
+                         int *local_n,int *start) 
+{
+    int base = n / nranks;
+    int rem  = n % nranks;
+
+    if (rank < rem) {
+        *local_n = base + 1;
+        *start   = rank * (base + 1);
+    } else {
+        *local_n = base;
+        *start   = rem * (base + 1) + (rank - rem) * base;
+    }
+}
+
 int poisson_plan_init(poisson_plan *p,
                            int nx, int ny, double Lx, double Ly)
 {
@@ -16,6 +31,14 @@ int poisson_plan_init(poisson_plan *p,
     p->nx=nx; p->ny=ny; p->Lx=Lx; p->Ly=Ly;
     p->hx = Lx/(double)(nx+1);
     p->hy = Ly/(double)(ny+1);
+    p->rank   = msg_rank();
+    p->nranks = num_ranks();
+
+    decompose_1d(nx, p->rank, p->nranks,
+                &p->local_nx, &p->x_start);
+
+    decompose_1d(ny, p->rank, p->nranks,
+                &p->local_ny, &p->y_start);
     p->lamx=0; p->lamy=0; p->A=0; p->B=0;
 
     /* fy contracts along y: the matrix is nx x ny, batch = nx. */
@@ -131,3 +154,4 @@ void poisson_residual_op(const poisson_plan *p,
         }
     }
 }
+

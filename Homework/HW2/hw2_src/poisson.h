@@ -42,12 +42,33 @@
  *====================================================================*/
 
 typedef struct {
-    int    nx, ny;
+
+    /* Global problem information */
+    int nx, ny;
     double Lx, Ly, hx, hy;
-    block_fst_plan fx;      /* m = ny, n = nx : contracts along x */
-    block_fst_plan fy;      /* m = nx, n = ny : contracts along y */
+
+    /* MPI information */
+    int rank;
+    int nranks;
+
+    /* x-slab decomposition */
+    int local_nx;
+    int x_start;
+
+    /* y-slab decomposition */
+    int local_ny;
+    int y_start;
+
+    /* Local FST plans */
+    block_fst_plan fx;
+    block_fst_plan fy;
+
+    /* Eigenvalues */
     double *lamx, *lamy;
-    double *A, *B;          /* nx x ny and ny x nx scratch */
+
+    /* Scratch arrays */
+    double *A, *B;
+
 } poisson_plan;
 
 int  poisson_plan_init(poisson_plan *p,
