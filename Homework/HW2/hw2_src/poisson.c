@@ -41,15 +41,18 @@ int poisson_plan_init(poisson_plan *p,
                 &p->local_ny, &p->y_start);
     p->lamx=0; p->lamy=0; p->A=0; p->B=0;
 
-    /* fy contracts along y: the matrix is nx x ny, batch = nx. */
-    if (block_fst_plan_init(&p->fy,nx,ny)) return 1;
-    /* fx contracts along x: the matrix is ny x nx, batch = ny. */
-    if (block_fst_plan_init(&p->fx,ny,nx)) { block_fst_plan_free(&p->fy); return 1; }
+    /* Allocate local matrices. */
+    /* fy contracts along y: the matrix is local nx x ny, batch = nx. */
+    if (block_fst_plan_init(&p->fy,p->local_nx,ny)) return 1;
+    /* fx contracts along x: the matrix is local ny x nx, batch = ny. */
+    if (block_fst_plan_init(&p->fx,p->local_ny,nx)) { block_fst_plan_free(&p->fy); return 1; }
 
     p->lamx = (double*) malloc((size_t)nx*sizeof(double));
     p->lamy = (double*) malloc((size_t)ny*sizeof(double));
-    p->A    = (double*) malloc((size_t)nx*ny*sizeof(double));
-    p->B    = (double*) malloc((size_t)nx*ny*sizeof(double));
+
+    /* Allocate local matrices. */
+    p->A    = (double*) malloc((size_t)p->local_nx*ny*sizeof(double));
+    p->B    = (double*) malloc((size_t)nx*p->local_ny*sizeof(double));
     if (!p->lamx || !p->lamy || !p->A || !p->B) {
         poisson_plan_free(p); return 2;
     }
@@ -80,11 +83,12 @@ void poisson_solve(poisson_plan *p,
                         const double * restrict F, double * restrict U)
 {
     const int nx=p->nx, ny=p->ny;
+    const int local_nx=p->local_nx, local_ny=p->local_ny;
     double * restrict A = p->A;
     double * restrict B = p->B;
     int i,j,k;
 
-    for (k=0; k<nx*ny; ++k) A[k]=F[k];
+    for (k=0; k<local_nx*ny; ++k) A[k]=F[k];
 
     /* ---- timed region: the actual FST solve, steps 1-7 -------------- */
     const double t0 = msg_wtime();
@@ -93,24 +97,39 @@ void poisson_solve(poisson_plan *p,
     block_fst_apply(&p->fy,A);
 
     /* 2. A(1:nx,1:ny) -> B(1:ny,1:nx) */
-    transpose_real(nx,ny,A,B);
+    transpose_parallel_dealer(nx, ny,
+                          local_nx, local_ny,
+                          A, B);
 
     /* 3. transform along x: B is ny x nx, contract over the nx index */
     block_fst_apply(&p->fx,B);
 
     /* 4. divide by the eigenvalues;  B(j,i) = B[j + i*ny] */
     for (i=0; i<nx; ++i) {
+
         const double lx = p->lamx[i];
-        double * restrict Bi = &B[i*ny];
-        for (j=0; j<ny; ++j)
-            Bi[j] /= (lx + p->lamy[j]);
+
+        double * restrict Bi =
+            &B[i*local_ny];
+
+        for (j=0; j<local_ny; ++j) {
+
+            const int global_j =
+                p->y_start + j;
+
+            Bi[j] /=
+                (lx + p->lamy[global_j]);
+        }
     }
 
     /* 5. back along x (S is its own inverse) */
     block_fst_apply(&p->fx,B);
 
     /* 6. B(1:ny,1:nx) -> A(1:nx,1:ny) */
-    transpose_real(ny,nx,B,A);
+
+    transpose_parallel_dealer(ny, nx,
+                          local_ny, local_nx,
+                          B, A);
 
     /* 7. back along y */
     block_fst_apply(&p->fy,A);
@@ -131,7 +150,7 @@ void poisson_solve(poisson_plan *p,
                "GFLOPS %8.3f\n", Nx, Ny, elapsed, gflops);
     }
 
-    for (k=0; k<nx*ny; ++k) U[k]=A[k];
+    for (k=0; k<local_nx*ny; ++k) U[k]=A[k];
 }
 
 /* F = -Laplacian_h U, zero Dirichlet data outside the index range. */

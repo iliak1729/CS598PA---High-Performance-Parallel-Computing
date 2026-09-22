@@ -52,111 +52,110 @@ LCFI7:
 	mov	w20, w1
 	add	w1, w21, 1
 	mov	x19, x0
-	stp	d13, d14, [sp, 80]
+	str	d15, [sp, 88]
 LCFI8:
-	scvtf	d13, w2
-	str	d15, [sp, 96]
-LCFI9:
 	scvtf	d15, w1
+	stp	d13, d14, [sp, 96]
+LCFI9:
+	scvtf	d13, w2
 	stp	x23, x24, [sp, 48]
 	stp	d0, d1, [x0, 8]
-	fdiv	d31, d0, d13
-	stp	w20, w21, [x0]
 	fdiv	d1, d1, d15
+	stp	w20, w21, [x0]
+	fdiv	d31, d0, d13
 	stp	d31, d1, [x0, 24]
 LCFI10:
 	bl	_msg_rank
 	str	w0, [x19, 40]
 	bl	_num_ranks
-	sdiv	w3, w20, w0
-	ldr	w1, [x19, 40]
+	sdiv	w4, w20, w0
+	ldr	w2, [x19, 40]
 	str	w0, [x19, 44]
-	msub	w2, w3, w0, w20
-	add	w4, w3, 1
-	cmp	w1, w2
+	msub	w3, w4, w0, w20
+	add	w1, w4, 1
+	cmp	w2, w3
 	bge	L5
-	mul	w2, w1, w4
+	mul	w3, w2, w1
 L6:
-	sdiv	w3, w21, w0
-	stp	w4, w2, [x19, 48]
-	msub	w0, w3, w0, w21
-	add	w4, w3, 1
-	cmp	w1, w0
+	sdiv	w4, w21, w0
+	stp	w1, w3, [x19, 48]
+	msub	w0, w4, w0, w21
+	add	w5, w4, 1
+	cmp	w2, w0
 	bge	L7
-	mul	w3, w1, w4
-L8:
 	movi	v31.4s, 0
+	mul	w3, w2, w5
 	add	x22, x19, 152
-	mov	w2, w21
 	mov	x0, x22
-	mov	w1, w20
-	stp	w4, w3, [x19, 56]
+	mov	w2, w21
+	stp	w5, w3, [x19, 56]
 	stp	q31, q31, [x19, 240]
 	bl	_block_fst_plan_init
 	cbz	w0, L23
 L9:
 	mov	w23, 1
 L4:
-	ldr	d15, [sp, 96]
+	ldr	d15, [sp, 88]
 	mov	w0, w23
 	ldp	x19, x20, [sp, 16]
 	ldp	x21, x22, [sp, 32]
 	ldp	x23, x24, [sp, 48]
-	ldp	d13, d14, [sp, 80]
+	ldp	d13, d14, [sp, 96]
 	ldp	x29, x30, [sp], 128
 LCFI11:
 	ret
 	.p2align 2,,3
 L7:
 LCFI12:
-	mul	w2, w0, w4
-	sub	w1, w1, w0
-	mov	w4, w3
-	madd	w3, w1, w3, w2
-	b	L8
-	.p2align 2,,3
-L5:
-	mul	w5, w2, w4
-	sub	w2, w1, w2
-	mov	w4, w3
-	madd	w2, w2, w3, w5
-	b	L6
-	.p2align 2,,3
+	mul	w3, w0, w5
+	sub	w2, w2, w0
+	movi	v31.4s, 0
+	mov	w5, w4
+	add	x22, x19, 152
+	mov	x0, x22
+	madd	w3, w2, w4, w3
+	mov	w2, w21
+	stp	q31, q31, [x19, 240]
+	stp	w5, w3, [x19, 56]
+	bl	_block_fst_plan_init
+	cbnz	w0, L9
 L23:
+	ldr	w1, [x19, 56]
 	mov	w2, w20
-	mov	w1, w21
 	add	x0, x19, 64
 	bl	_block_fst_plan_init
 	mov	w23, w0
 	cbnz	w0, L24
-	sbfiz	x0, x20, 3, 32
+	sbfiz	x2, x20, 3, 32
 	stp	x25, x26, [x29, 64]
 LCFI13:
-	sbfiz	x24, x21, 3, 32
-	sxtw	x25, w20
-	sxtw	x26, w21
-	bl	_malloc
-	mov	x22, x0
-	mov	x0, x24
-	str	x22, [x19, 240]
-	bl	_malloc
-	mul	x1, x25, x24
-	mov	x24, x0
-	str	x24, [x19, 248]
-	mov	x0, x1
-	str	x1, [x29, 120]
-	bl	_malloc
-	mov	x2, x0
-	ldr	x0, [x29, 120]
-	str	x2, [x19, 256]
+	sbfiz	x25, x21, 3, 32
+	mov	x0, x2
+	str	x27, [x29, 80]
+LCFI14:
+	sxtw	x27, w21
 	str	x2, [x29, 120]
 	bl	_malloc
-	ldr	x1, [x29, 120]
+	mov	x22, x0
+	mov	x0, x25
+	str	x22, [x19, 240]
+	bl	_malloc
+	ldrsw	x3, [x19, 48]
+	mov	x24, x0
+	str	x24, [x19, 248]
+	mul	x0, x3, x25
+	bl	_malloc
+	ldr	x2, [x29, 120]
+	mov	x25, x0
+	ldrsw	x3, [x19, 56]
+	str	x25, [x19, 256]
+	mul	x0, x3, x2
+	bl	_malloc
 	cmp	x22, 0
+	str	x0, [x19, 264]
 	ccmp	x24, 0, 4, ne
 	cset	w2, eq
-	str	x0, [x19, 264]
-	cmp	x1, 0
+	cmp	x25, 0
 	ccmp	x0, 0, 4, ne
 	cset	w1, eq
 	orr	w1, w2, w1
@@ -167,9 +166,10 @@ LCFI13:
 	adrp	x0, lC0@PAGE
 	fmov	d14, 4.0e+0
 	sub	x22, x22, #8
-	add	x25, x25, 1
 	ldr	d30, [x0, #lC0@PAGEOFF]
+	sxtw	x0, w20
 	mov	x20, 1
+	add	x25, x0, 1
 	fmul	d31, d31, d31
 	fdiv	d13, d30, d13
 	fdiv	d14, d14, d31
@@ -191,7 +191,7 @@ L17:
 	adrp	x0, lC0@PAGE
 	fmov	d31, 4.0e+0
 	sub	x24, x24, #8
-	add	x21, x26, 1
+	add	x21, x27, 1
 	ldr	d14, [x0, #lC0@PAGEOFF]
 	mov	x19, 1
 	fmul	d30, d30, d30
@@ -209,30 +209,41 @@ L18:
 	cmp	x21, x19
 	bne	L18
 L22:
-	ldr	d15, [sp, 96]
+	ldr	x27, [x29, 80]
+LCFI15:
 	mov	w0, w23
 	ldp	x25, x26, [x29, 64]
-LCFI14:
+LCFI16:
 	ldp	x19, x20, [sp, 16]
 	ldp	x21, x22, [sp, 32]
 	ldp	x23, x24, [sp, 48]
-	ldp	d13, d14, [sp, 80]
+	ldr	d15, [sp, 88]
+	ldp	d13, d14, [sp, 96]
 	ldp	x29, x30, [sp], 128
-LCFI15:
+LCFI17:
 	ret
 	.p2align 2,,3
+L5:
+LCFI18:
+	mul	w5, w3, w1
+	sub	w3, w2, w3
+	mov	w1, w4
+	madd	w3, w3, w4, w5
+	b	L6
+	.p2align 2,,3
 L24:
-LCFI16:
 	mov	x0, x22
 	bl	_block_fst_plan_free
 	b	L9
 L12:
-LCFI17:
+LCFI19:
 	mov	x0, x19
 	mov	w23, 2
 	bl	_poisson_plan_free
+	ldr	x27, [x29, 80]
+LCFI20:
 	ldp	x25, x26, [x29, 64]
-LCFI18:
+LCFI21:
 	b	L4
 LFE5:
 	.cstring
@@ -246,25 +257,26 @@ lC1:
 _poisson_solve:
 LFB7:
 	sub	sp, sp, #160
-LCFI19:
+LCFI22:
 	stp	x29, x30, [sp, 32]
-LCFI20:
+LCFI23:
 	add	x29, sp, 32
-LCFI21:
+LCFI24:
 	stp	x19, x20, [sp, 48]
 	stp	x21, x22, [sp, 64]
 	stp	x23, x24, [sp, 80]
-LCFI22:
-	mov	x23, x0
 	stp	x25, x26, [sp, 96]
-	str	x27, [sp, 112]
-LCFI23:
-	mov	x27, x2
+	stp	x27, x28, [sp, 112]
+LCFI25:
+	mov	x27, x0
+	str	x2, [x29, 120]
 	stp	d14, d15, [sp, 128]
-LCFI24:
-	ldp	w20, w24, [x0]
+LCFI26:
+	ldr	w23, [x0, 48]
 	ldp	x19, x25, [x0, 256]
-	mul	w21, w20, w24
+	ldp	w20, w22, [x0]
+	ldr	w26, [x0, 56]
+	mul	w21, w22, w23
 	cmp	w21, 0
 	ble	L26
 	ubfiz	x2, x21, 3, 32
@@ -273,41 +285,46 @@ LCFI24:
 L26:
 	bl	_msg_wtime
 	fmov	d15, d0
-	add	x22, x23, 152
+	add	x0, x27, 152
 	mov	x1, x19
-	mov	x0, x22
-	add	x26, x23, 64
 	bl	_block_fst_apply
-	mov	w1, w24
+	mov	w1, w22
 	mov	w0, w20
-	mov	x3, x25
-	mov	x2, x19
-	bl	_transpose_real
+	mov	x5, x25
+	mov	x4, x19
+	mov	w3, w26
+	mov	w2, w23
+	bl	_transpose_parallel_dealer
 	mov	x1, x25
-	mov	x0, x26
+	add	x0, x27, 64
 	bl	_block_fst_apply
 	cmp	w20, 0
 	ble	L27
-	cmp	w24, 0
+	cmp	w26, 0
 	ble	L27
-	lsr	w4, w24, 1
+	ldr	w11, [x27, 60]
+	and	w8, w26, -2
+	lsr	w4, w26, 1
+	ldp	x5, x13, [x27, 240]
 	mov	x7, 0
-	ldp	x5, x3, [x23, 240]
+	sxtw	x10, w26
 	lsl	x4, x4, 4
-	ubfiz	x6, x24, 3, 32
-	add	x9, x5, w20, uxtw 3
+	ubfiz	x6, x26, 3, 32
+	add	x0, x5, w20, uxtw 3
 	mov	x2, x25
-	sub	w0, w24, #1
-	and	w10, w24, -2
-	and	x8, x24, 4294967294
+	sub	w12, w26, #1
+	sxtw	x3, w11
+	add	w11, w11, w8
+	add	x9, x3, 1
+	add	x3, x13, x3, lsl 3
+	add	x9, x13, x9, lsl 3
 L34:
 	ldr	d28, [x5]
-	cmp	w0, 2
+	cmp	w12, 2
 	bls	L28
-	sub	x1, x2, x3
-	cmp	x1, 8
+	cmp	x2, x9
 	beq	L28
-L45:
+L42:
 	dup	v29.2d, v28.d[0]
 	mov	x1, 0
 	.p2align 5,,15
@@ -320,24 +337,24 @@ L29:
 	add	x1, x1, 16
 	cmp	x4, x1
 	bne	L29
-	cmp	w24, w10
+	cmp	w8, w26
 	beq	L30
-	ldr	d30, [x3, x8, lsl 3]
-	add	x1, x7, x8, lsl 3
+	ldr	d30, [x13, w11, sxtw 3]
+	add	w1, w8, w7
+	lsl	x1, x1, 3
 	ldr	d31, [x25, x1]
 	fadd	d28, d28, d30
 	fdiv	d31, d31, d28
 	str	d31, [x25, x1]
 L30:
 	add	x5, x5, 8
-	cmp	x5, x9
+	cmp	x5, x0
 	beq	L27
 	add	x2, x2, x6
 	ldr	d28, [x5]
-	add	x7, x7, x6
-	sub	x1, x2, x3
-	cmp	x1, 8
-	bne	L45
+	add	x7, x7, x10
+	cmp	x2, x9
+	bne	L42
 L28:
 	mov	x1, 0
 	.p2align 5,,15
@@ -351,62 +368,64 @@ L31:
 	cmp	x6, x1
 	bne	L31
 	add	x5, x5, 8
-	add	x7, x7, x6
+	add	x7, x7, x10
 	add	x2, x2, x6
-	cmp	x9, x5
+	cmp	x0, x5
 	bne	L34
 	.p2align 5,,15
 L27:
-	mov	x0, x26
+	add	x0, x27, 64
 	mov	x1, x25
 	bl	_block_fst_apply
-	mov	x3, x19
-	mov	x2, x25
+	mov	x5, x19
+	mov	x4, x25
+	mov	w3, w23
+	mov	w2, w26
 	mov	w1, w20
-	mov	w0, w24
-	bl	_transpose_real
+	mov	w0, w22
+	bl	_transpose_parallel_dealer
 	mov	x1, x19
-	mov	x0, x22
+	add	x0, x27, 152
 	bl	_block_fst_apply
 	bl	_msg_wtime
 	fmov	d14, d0
 	bl	_msg_rank
-	cbz	w0, L46
+	cbz	w0, L43
 	cmp	w21, 0
 	ble	L25
-L47:
-	ldp	d14, d15, [sp, 128]
+L44:
+	ldr	x0, [x29, 120]
 	ubfiz	x2, x21, 3, 32
 	mov	x1, x19
-	ldp	x29, x30, [sp, 32]
-	mov	x0, x27
-	ldp	x19, x20, [sp, 48]
 	ldp	x21, x22, [sp, 64]
+	ldp	x19, x20, [sp, 48]
 	ldp	x23, x24, [sp, 80]
 	ldp	x25, x26, [sp, 96]
-	ldr	x27, [sp, 112]
+	ldp	x27, x28, [sp, 112]
+	ldp	x29, x30, [sp, 32]
+	ldp	d14, d15, [sp, 128]
 	add	sp, sp, 160
-LCFI25:
+LCFI27:
 	b	_memcpy
-L46:
-LCFI26:
-	add	w23, w20, 1
-	add	w22, w24, 1
+L43:
+LCFI28:
+	add	w24, w20, 1
+	add	w23, w22, 1
 	fsub	d30, d14, d15
-	scvtf	d31, w22
-	scvtf	d0, w23
-	str	d30, [x29, 120]
+	scvtf	d31, w23
+	scvtf	d0, w24
+	str	d30, [x29, 112]
 	fmul	d0, d0, d31
 	bl	_log2
 	adrp	x0, lC2@PAGE
 	scvtf	d31, w20
-	scvtf	d28, w24
-	ldr	d30, [x29, 120]
-	str	w23, [sp]
+	scvtf	d28, w22
+	ldr	d30, [x29, 112]
+	str	w24, [sp]
 	ldr	d29, [x0, #lC2@PAGEOFF]
 	adrp	x0, lC1@PAGE
 	add	x0, x0, lC1@PAGEOFF;
-	str	w22, [sp, 8]
+	str	w23, [sp, 8]
 	fmul	d31, d31, d28
 	fmul	d29, d0, d29
 	fmul	d31, d31, d29
@@ -414,17 +433,17 @@ LCFI26:
 	stp	d30, d31, [sp, 16]
 	bl	_printf
 	cmp	w21, 0
-	bgt	L47
+	bgt	L44
 L25:
-	ldr	x27, [sp, 112]
+	ldp	d14, d15, [sp, 128]
 	ldp	x29, x30, [sp, 32]
 	ldp	x19, x20, [sp, 48]
 	ldp	x21, x22, [sp, 64]
 	ldp	x23, x24, [sp, 80]
 	ldp	x25, x26, [sp, 96]
-	ldp	d14, d15, [sp, 128]
+	ldp	x27, x28, [sp, 112]
 	add	sp, sp, 160
-LCFI27:
+LCFI29:
 	ret
 LFE7:
 	.align	2
@@ -434,10 +453,10 @@ _poisson_residual_op:
 LFB8:
 	ldr	w16, [x0, 4]
 	cmp	w16, 0
-	ble	L122
+	ble	L119
 	ldr	w6, [x0]
 	cmp	w6, 0
-	ble	L122
+	ble	L119
 	ldp	d31, d29, [x0, 24]
 	fmov	d30, 1.0e+0
 	subs	w7, w16, #1
@@ -453,9 +472,9 @@ LFB8:
 	fmul	d29, d29, d29
 	fdiv	d31, d30, d31
 	fdiv	d29, d30, d29
-	beq	L126
+	beq	L123
 	add	x10, x1, x11
-	cbz	w4, L65
+	cbz	w4, L62
 	ldr	d1, [x1, x11]
 	fmov	d0, 2.0e+0
 	ldr	d21, [x1, 8]
@@ -463,12 +482,12 @@ LFB8:
 	fnmsub	d0, d2, d0, d1
 	fmul	d0, d0, d29
 	fmadd	d0, d31, d21, d0
-L66:
+L63:
 	str	d0, [x2]
 	cmp	w6, 1
-	beq	L67
+	beq	L64
 	cmp	w4, 2
-	ble	L98
+	ble	L95
 	fmov	d6, d2
 	fmov	d7, 2.0e+0
 	add	x15, x10, 8
@@ -477,15 +496,15 @@ L66:
 	sub	w9, w9, #2
 	mov	x3, 3
 	add	x9, x3, w9, uxtw 1
-L72:
+L69:
 	ldr	d27, [x1, x0, lsl 3]
 	movi	d23, #0
 	add	w5, w0, 1
 	add	w3, w0, 1
 	cmp	w4, w0
-	ble	L69
+	ble	L66
 	ldr	d23, [x1, x3, lsl 3]
-L69:
+L66:
 	fnmsub	d23, d27, d7, d23
 	movi	d16, #0
 	add	w3, w0, 2
@@ -497,9 +516,9 @@ L69:
 	fmadd	d1, d31, d23, d1
 	str	d1, [x2, x0, lsl 3]
 	cmp	w4, w5
-	ble	L71
+	ble	L68
 	ldr	d16, [x1, w3, uxtw 3]
-L71:
+L68:
 	fnmsub	d4, d6, d7, d27
 	ldr	d3, [x15, x0, lsl 3]
 	fnmsub	d3, d6, d7, d3
@@ -509,9 +528,9 @@ L71:
 	str	d3, [x13, x0, lsl 3]
 	add	x0, x0, 2
 	cmp	x9, x0
-	bne	L72
+	bne	L69
 	mov	w0, w3
-L68:
+L65:
 	ubfiz	x9, x0, 3, 32
 	sub	w5, w0, #1
 	movi	d19, #0
@@ -519,9 +538,9 @@ L68:
 	ldr	d22, [x1, x9]
 	ldr	d20, [x1, x5, lsl 3]
 	cmp	w4, w0
-	ble	L73
+	ble	L70
 	ldr	d19, [x1, w3, uxtw 3]
-L73:
+L70:
 	add	w5, w6, w0
 	fmov	d30, 2.0e+0
 	ldr	d18, [x1, x5, lsl 3]
@@ -532,13 +551,13 @@ L73:
 	fmadd	d30, d31, d20, d30
 	str	d30, [x2, x9]
 	cmp	w6, w3
-	ble	L67
+	ble	L64
 	ubfiz	x5, x3, 3, 32
 	movi	d0, #0
 	ldr	d26, [x1, x5]
 	cmp	w4, w3
-	bgt	L127
-L75:
+	bgt	L124
+L72:
 	add	w3, w6, w3
 	fmov	d25, 2.0e+0
 	ldr	d24, [x1, x3, lsl 3]
@@ -548,22 +567,22 @@ L75:
 	fmul	d25, d25, d29
 	fmadd	d25, d31, d22, d25
 	str	d25, [x2, x5]
-L67:
+L64:
 	mov	w5, 0
 	fmov	d19, 2.0e+0
 	mov	w10, w6
 	add	w5, w5, 1
 	mov	w9, 0
 	cmp	w16, w5
-	beq	L122
-L125:
+	beq	L119
+L122:
 	stp	x29, x30, [sp, -32]!
-LCFI28:
+LCFI30:
 	mov	x29, sp
 	stp	x19, x20, [sp, 16]
-LCFI29:
+LCFI31:
 	.p2align 5,,15
-L124:
+L121:
 	add	w17, w17, w6
 	add	x14, x14, x11
 	movi	d18, #0
@@ -575,16 +594,16 @@ L124:
 	add	x8, x8, x11
 	add	x12, x12, x11
 	add	x15, x1, x0
-	cbz	w4, L93
+	cbz	w4, L90
 	add	w3, w9, 1
 	ldr	d18, [x1, x3, lsl 3]
-L93:
+L90:
 	movi	d26, #0
 	ldr	d23, [x1, x0]
 	cmp	w7, w5
-	ble	L76
+	ble	L73
 	ldr	d26, [x1, w10, uxtw 3]
-L76:
+L73:
 	fnmsub	d23, d20, d19, d23
 	fnmsub	d18, d20, d19, d18
 	fsub	d23, d23, d26
@@ -592,9 +611,9 @@ L76:
 	fmadd	d23, d18, d31, d23
 	str	d23, [x8]
 	cmp	w6, 1
-	beq	L58
+	beq	L55
 	cmp	w4, 2
-	ble	L103
+	ble	L100
 	mov	x0, 1
 	fmov	d25, d20
 	movi	d5, #0
@@ -603,18 +622,18 @@ L76:
 	ldr	d17, [x14, x0, lsl 3]
 	add	w30, w9, 1
 	cmp	w4, w0
-	ble	L79
-L129:
+	ble	L76
+L126:
 	add	w20, w30, w0
 	ldr	d5, [x1, x20, lsl 3]
-L79:
+L76:
 	movi	d6, #0
 	ldr	d4, [x15, x0, lsl 3]
 	cmp	w7, w5
-	ble	L80
+	ble	L77
 	add	w20, w10, w0
 	ldr	d6, [x1, x20, lsl 3]
-L80:
+L77:
 	fnmsub	d4, d17, d19, d4
 	fnmsub	d5, d17, d19, d5
 	movi	d24, #0
@@ -625,17 +644,17 @@ L80:
 	fmadd	d4, d31, d5, d4
 	str	d4, [x8, x0, lsl 3]
 	cmp	w4, w3
-	ble	L82
+	ble	L79
 	add	w20, w30, w3
 	ldr	d24, [x1, x20, lsl 3]
-L82:
+L79:
 	movi	d30, #0
 	ldr	d22, [x19, x0, lsl 3]
 	cmp	w7, w5
-	ble	L83
+	ble	L80
 	add	w20, w3, w10
 	ldr	d30, [x1, x20, lsl 3]
-L83:
+L80:
 	fnmsub	d7, d25, d19, d22
 	fnmsub	d16, d25, d19, d17
 	add	w3, w3, 2
@@ -645,41 +664,41 @@ L83:
 	fmadd	d7, d31, d16, d7
 	str	d7, [x13, x0, lsl 3]
 	cmp	w4, w3
-	ble	L128
+	ble	L125
 	add	x0, x0, 2
 	movi	d5, #0
 	ldr	d17, [x14, x0, lsl 3]
 	cmp	w4, w0
-	ble	L79
-	b	L129
-L126:
-LCFI30:
-	cbz	w4, L52
+	ble	L76
+	b	L126
+L123:
+LCFI32:
+	cbz	w4, L49
 	ldr	d26, [x1, 8]
 	fadd	d4, d2, d2
 	fsub	d26, d4, d26
 	fmul	d4, d29, d4
 	fmadd	d4, d31, d26, d4
-L53:
+L50:
 	str	d4, [x2]
 	cmp	w6, 1
-	beq	L67
+	beq	L64
 	cmp	w4, 2
-	ble	L94
+	ble	L91
 	mov	x0, 1
 	lsr	w10, w6, 1
 	sub	w10, w10, #2
 	mov	x3, 3
 	add	x10, x3, w10, uxtw 1
-L61:
+L58:
 	ldr	d5, [x1, x0, lsl 3]
 	movi	d21, #0
 	add	w9, w0, 1
 	add	w3, w0, 1
 	cmp	w4, w0
-	ble	L55
+	ble	L52
 	ldr	d21, [x1, x3, lsl 3]
-L55:
+L52:
 	fadd	d17, d5, d5
 	add	w5, w0, 2
 	mov	x3, x5
@@ -691,7 +710,7 @@ L55:
 	fadd	d6, d2, d2
 	str	d17, [x2, x0, lsl 3]
 	cmp	w4, w9
-	ble	L120
+	ble	L117
 	ldr	d4, [x1, w5, uxtw 3]
 	fsub	d5, d6, d5
 	fmul	d6, d6, d29
@@ -700,8 +719,8 @@ L55:
 	str	d6, [x13, x0, lsl 3]
 	add	x0, x0, 2
 	cmp	x0, x10
-	bne	L61
-L54:
+	bne	L58
+L51:
 	lsl	x5, x5, 3
 	sub	w0, w3, #1
 	movi	d1, #0
@@ -709,9 +728,9 @@ L54:
 	ldr	d27, [x1, x5]
 	ldr	d3, [x1, x0, lsl 3]
 	cmp	w4, w3
-	ble	L62
+	ble	L59
 	ldr	d1, [x1, w9, uxtw 3]
-L62:
+L59:
 	fadd	d0, d27, d27
 	fsub	d3, d0, d3
 	fmul	d0, d29, d0
@@ -719,15 +738,15 @@ L62:
 	fmadd	d0, d31, d3, d0
 	str	d0, [x2, x5]
 	cmp	w6, w9
-	ble	L67
+	ble	L64
 	ubfiz	x0, x9, 3, 32
 	movi	d2, #0
 	ldr	d28, [x1, x0]
 	cmp	w4, w9
-	ble	L64
+	ble	L61
 	add	w3, w3, 2
 	ldr	d2, [x1, x3, lsl 3]
-L64:
+L61:
 	fadd	d28, d28, d28
 	mov	w5, 0
 	fmov	d19, 2.0e+0
@@ -740,14 +759,14 @@ L64:
 	fmadd	d28, d31, d27, d28
 	str	d28, [x2, x0]
 	cmp	w16, w5
-	bne	L125
-L122:
+	bne	L122
+L119:
 	ret
 	.p2align 2,,3
-L128:
-LCFI31:
+L125:
+LCFI33:
 	add	w0, w0, 2
-L78:
+L75:
 	add	w3, w0, w9
 	sub	w15, w0, #1
 	movi	d3, #0
@@ -757,18 +776,18 @@ L78:
 	ldr	d21, [x1, x3]
 	ldr	d1, [x1, x15, lsl 3]
 	cmp	w4, w0
-	ble	L85
+	ble	L82
 	add	w15, w30, w9
 	ldr	d3, [x1, x15, lsl 3]
-L85:
+L82:
 	add	w15, w0, w17
 	movi	d2, #0
 	ldr	d0, [x1, x15, lsl 3]
 	cmp	w7, w5
-	ble	L86
+	ble	L83
 	add	w15, w10, w0
 	ldr	d2, [x1, x15, lsl 3]
-L86:
+L83:
 	fnmsub	d0, d21, d19, d0
 	fnmsub	d1, d21, d19, d1
 	fsub	d0, d0, d2
@@ -777,25 +796,25 @@ L86:
 	fmadd	d0, d31, d1, d0
 	str	d0, [x2, x3]
 	cmp	w6, w30
-	ble	L58
+	ble	L55
 	add	w3, w30, w9
 	movi	d28, #0
 	lsl	x3, x3, 3
 	ldr	d18, [x1, x3]
 	cmp	w4, w30
-	ble	L88
+	ble	L85
 	add	w0, w0, 2
 	add	w0, w0, w9
 	ldr	d28, [x1, x0, lsl 3]
-L88:
+L85:
 	add	w0, w30, w17
 	movi	d27, #0
 	ldr	d26, [x1, x0, lsl 3]
 	cmp	w7, w5
-	ble	L89
+	ble	L86
 	add	w30, w10, w30
 	ldr	d27, [x1, x30, lsl 3]
-L89:
+L86:
 	fmov	d23, 2.0e+0
 	fnmsub	d21, d18, d23, d21
 	fnmsub	d23, d18, d23, d26
@@ -804,29 +823,29 @@ L89:
 	fmul	d23, d23, d29
 	fmadd	d23, d31, d21, d23
 	str	d23, [x2, x3]
-L58:
+L55:
 	add	w5, w5, 1
 	cmp	w16, w5
-	bne	L124
+	bne	L121
 	ldp	x19, x20, [sp, 16]
 	ldp	x29, x30, [sp], 32
-LCFI32:
+LCFI34:
 	ret
 	.p2align 2,,3
-L52:
+L49:
 	fadd	d25, d2, d2
 	fadd	d24, d31, d29
 	fmul	d4, d25, d24
-	b	L53
-L65:
+	b	L50
+L62:
 	ldr	d17, [x1, x11]
 	fadd	d5, d2, d2
 	fsub	d17, d5, d17
 	fmul	d17, d17, d29
 	fmadd	d0, d31, d5, d17
-	b	L66
+	b	L63
 	.p2align 2,,3
-L120:
+L117:
 	fadd	d7, d2, d2
 	fsub	d16, d7, d5
 	fmul	d7, d29, d7
@@ -834,25 +853,25 @@ L120:
 	str	d7, [x13, x0, lsl 3]
 	add	x0, x0, 2
 	cmp	x10, x0
-	bne	L61
+	bne	L58
 	uxtw	x5, w5
-	b	L54
-L127:
+	b	L51
+L124:
 	add	w0, w0, 2
 	ldr	d0, [x1, x0, lsl 3]
+	b	L72
+L100:
+LCFI35:
+	mov	w0, 1
 	b	L75
-L103:
-LCFI33:
+L95:
+LCFI36:
 	mov	w0, 1
-	b	L78
-L98:
-LCFI34:
-	mov	w0, 1
-	b	L68
-L94:
+	b	L65
+L91:
 	mov	w3, 1
 	mov	x5, 1
-	b	L54
+	b	L51
 LFE8:
 	.literal8
 	.align	3
@@ -961,17 +980,17 @@ LASFDE3:
 	.set L$set$13,LCFI8-LCFI7
 	.long L$set$13
 	.byte	0x5
-	.uleb128 0x4d
-	.uleb128 0x6
-	.byte	0x5
-	.uleb128 0x4e
+	.uleb128 0x4f
 	.uleb128 0x5
 	.byte	0x4
 	.set L$set$14,LCFI9-LCFI8
 	.long L$set$14
 	.byte	0x5
-	.uleb128 0x4f
+	.uleb128 0x4d
 	.uleb128 0x4
+	.byte	0x5
+	.uleb128 0x4e
+	.uleb128 0x3
 	.byte	0x4
 	.set L$set$15,LCFI10-LCFI9
 	.long L$set$15
@@ -1014,11 +1033,20 @@ LASFDE3:
 	.byte	0x4
 	.set L$set$19,LCFI14-LCFI13
 	.long L$set$19
-	.byte	0xda
-	.byte	0xd9
+	.byte	0x9b
+	.uleb128 0x6
 	.byte	0x4
 	.set L$set$20,LCFI15-LCFI14
 	.long L$set$20
+	.byte	0xdb
+	.byte	0x4
+	.set L$set$21,LCFI16-LCFI15
+	.long L$set$21
+	.byte	0xda
+	.byte	0xd9
+	.byte	0x4
+	.set L$set$22,LCFI17-LCFI16
+	.long L$set$22
 	.byte	0xde
 	.byte	0xdd
 	.byte	0xd7
@@ -1037,8 +1065,8 @@ LASFDE3:
 	.uleb128 0x1f
 	.uleb128 0
 	.byte	0x4
-	.set L$set$21,LCFI16-LCFI15
-	.long L$set$21
+	.set L$set$23,LCFI18-LCFI17
+	.long L$set$23
 	.byte	0xc
 	.uleb128 0x1d
 	.uleb128 0x80
@@ -1060,72 +1088,16 @@ LASFDE3:
 	.uleb128 0xf
 	.byte	0x5
 	.uleb128 0x4d
-	.uleb128 0x6
+	.uleb128 0x4
 	.byte	0x5
 	.uleb128 0x4e
-	.uleb128 0x5
+	.uleb128 0x3
 	.byte	0x5
 	.uleb128 0x4f
-	.uleb128 0x4
+	.uleb128 0x5
 	.byte	0x4
-	.set L$set$22,LCFI17-LCFI16
-	.long L$set$22
-	.byte	0x99
-	.uleb128 0x8
-	.byte	0x9a
-	.uleb128 0x7
-	.byte	0x4
-	.set L$set$23,LCFI18-LCFI17
-	.long L$set$23
-	.byte	0xda
-	.byte	0xd9
-	.align	3
-LEFDE3:
-LSFDE5:
-	.set L$set$24,LEFDE5-LASFDE5
+	.set L$set$24,LCFI19-LCFI18
 	.long L$set$24
-LASFDE5:
-	.long	LASFDE5-EH_frame1
-	.quad	LFB7-.
-	.set L$set$25,LFE7-LFB7
-	.quad L$set$25
-	.uleb128 0
-	.byte	0x4
-	.set L$set$26,LCFI19-LFB7
-	.long L$set$26
-	.byte	0xe
-	.uleb128 0xa0
-	.byte	0x4
-	.set L$set$27,LCFI20-LCFI19
-	.long L$set$27
-	.byte	0x9d
-	.uleb128 0x10
-	.byte	0x9e
-	.uleb128 0xf
-	.byte	0x4
-	.set L$set$28,LCFI21-LCFI20
-	.long L$set$28
-	.byte	0xc
-	.uleb128 0x1d
-	.uleb128 0x80
-	.byte	0x4
-	.set L$set$29,LCFI22-LCFI21
-	.long L$set$29
-	.byte	0x93
-	.uleb128 0xe
-	.byte	0x94
-	.uleb128 0xd
-	.byte	0x95
-	.uleb128 0xc
-	.byte	0x96
-	.uleb128 0xb
-	.byte	0x97
-	.uleb128 0xa
-	.byte	0x98
-	.uleb128 0x9
-	.byte	0x4
-	.set L$set$30,LCFI23-LCFI22
-	.long L$set$30
 	.byte	0x99
 	.uleb128 0x8
 	.byte	0x9a
@@ -1133,8 +1105,69 @@ LASFDE5:
 	.byte	0x9b
 	.uleb128 0x6
 	.byte	0x4
+	.set L$set$25,LCFI20-LCFI19
+	.long L$set$25
+	.byte	0xdb
+	.byte	0x4
+	.set L$set$26,LCFI21-LCFI20
+	.long L$set$26
+	.byte	0xda
+	.byte	0xd9
+	.align	3
+LEFDE3:
+LSFDE5:
+	.set L$set$27,LEFDE5-LASFDE5
+	.long L$set$27
+LASFDE5:
+	.long	LASFDE5-EH_frame1
+	.quad	LFB7-.
+	.set L$set$28,LFE7-LFB7
+	.quad L$set$28
+	.uleb128 0
+	.byte	0x4
+	.set L$set$29,LCFI22-LFB7
+	.long L$set$29
+	.byte	0xe
+	.uleb128 0xa0
+	.byte	0x4
+	.set L$set$30,LCFI23-LCFI22
+	.long L$set$30
+	.byte	0x9d
+	.uleb128 0x10
+	.byte	0x9e
+	.uleb128 0xf
+	.byte	0x4
 	.set L$set$31,LCFI24-LCFI23
 	.long L$set$31
+	.byte	0xc
+	.uleb128 0x1d
+	.uleb128 0x80
+	.byte	0x4
+	.set L$set$32,LCFI25-LCFI24
+	.long L$set$32
+	.byte	0x93
+	.uleb128 0xe
+	.byte	0x94
+	.uleb128 0xd
+	.byte	0x95
+	.uleb128 0xc
+	.byte	0x96
+	.uleb128 0xb
+	.byte	0x97
+	.uleb128 0xa
+	.byte	0x98
+	.uleb128 0x9
+	.byte	0x99
+	.uleb128 0x8
+	.byte	0x9a
+	.uleb128 0x7
+	.byte	0x9b
+	.uleb128 0x6
+	.byte	0x9c
+	.uleb128 0x5
+	.byte	0x4
+	.set L$set$33,LCFI26-LCFI25
+	.long L$set$33
 	.byte	0x5
 	.uleb128 0x4e
 	.uleb128 0x4
@@ -1142,10 +1175,11 @@ LASFDE5:
 	.uleb128 0x4f
 	.uleb128 0x3
 	.byte	0x4
-	.set L$set$32,LCFI25-LCFI24
-	.long L$set$32
+	.set L$set$34,LCFI27-LCFI26
+	.long L$set$34
 	.byte	0xa
 	.byte	0xdb
+	.byte	0xdc
 	.byte	0xd9
 	.byte	0xda
 	.byte	0xd7
@@ -1164,13 +1198,14 @@ LASFDE5:
 	.uleb128 0x1f
 	.uleb128 0
 	.byte	0x4
-	.set L$set$33,LCFI26-LCFI25
-	.long L$set$33
+	.set L$set$35,LCFI28-LCFI27
+	.long L$set$35
 	.byte	0xb
 	.byte	0x4
-	.set L$set$34,LCFI27-LCFI26
-	.long L$set$34
+	.set L$set$36,LCFI29-LCFI28
+	.long L$set$36
 	.byte	0xdb
+	.byte	0xdc
 	.byte	0xd9
 	.byte	0xda
 	.byte	0xd7
@@ -1191,61 +1226,39 @@ LASFDE5:
 	.align	3
 LEFDE5:
 LSFDE7:
-	.set L$set$35,LEFDE7-LASFDE7
-	.long L$set$35
+	.set L$set$37,LEFDE7-LASFDE7
+	.long L$set$37
 LASFDE7:
 	.long	LASFDE7-EH_frame1
 	.quad	LFB8-.
-	.set L$set$36,LFE8-LFB8
-	.quad L$set$36
+	.set L$set$38,LFE8-LFB8
+	.quad L$set$38
 	.uleb128 0
 	.byte	0x4
-	.set L$set$37,LCFI28-LFB8
-	.long L$set$37
+	.set L$set$39,LCFI30-LFB8
+	.long L$set$39
 	.byte	0xe
 	.uleb128 0x20
 	.byte	0x9d
 	.uleb128 0x4
 	.byte	0x9e
 	.uleb128 0x3
-	.byte	0x4
-	.set L$set$38,LCFI29-LCFI28
-	.long L$set$38
-	.byte	0x93
-	.uleb128 0x2
-	.byte	0x94
-	.uleb128 0x1
-	.byte	0x4
-	.set L$set$39,LCFI30-LCFI29
-	.long L$set$39
-	.byte	0xe
-	.uleb128 0
-	.byte	0xd3
-	.byte	0xd4
-	.byte	0xdd
-	.byte	0xde
 	.byte	0x4
 	.set L$set$40,LCFI31-LCFI30
 	.long L$set$40
-	.byte	0xe
-	.uleb128 0x20
 	.byte	0x93
 	.uleb128 0x2
 	.byte	0x94
 	.uleb128 0x1
-	.byte	0x9d
-	.uleb128 0x4
-	.byte	0x9e
-	.uleb128 0x3
 	.byte	0x4
 	.set L$set$41,LCFI32-LCFI31
 	.long L$set$41
-	.byte	0xde
-	.byte	0xdd
-	.byte	0xd3
-	.byte	0xd4
 	.byte	0xe
 	.uleb128 0
+	.byte	0xd3
+	.byte	0xd4
+	.byte	0xdd
+	.byte	0xde
 	.byte	0x4
 	.set L$set$42,LCFI33-LCFI32
 	.long L$set$42
@@ -1262,6 +1275,28 @@ LASFDE7:
 	.byte	0x4
 	.set L$set$43,LCFI34-LCFI33
 	.long L$set$43
+	.byte	0xde
+	.byte	0xdd
+	.byte	0xd3
+	.byte	0xd4
+	.byte	0xe
+	.uleb128 0
+	.byte	0x4
+	.set L$set$44,LCFI35-LCFI34
+	.long L$set$44
+	.byte	0xe
+	.uleb128 0x20
+	.byte	0x93
+	.uleb128 0x2
+	.byte	0x94
+	.uleb128 0x1
+	.byte	0x9d
+	.uleb128 0x4
+	.byte	0x9e
+	.uleb128 0x3
+	.byte	0x4
+	.set L$set$45,LCFI36-LCFI35
+	.long L$set$45
 	.byte	0xe
 	.uleb128 0
 	.byte	0xd3

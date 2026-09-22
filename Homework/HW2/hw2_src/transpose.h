@@ -27,6 +27,8 @@ void transpose_naive  (int m, int n, const double * restrict A,
 void transpose_blocked(int m, int n, const double * restrict A,
                                      double * restrict B);
 
+void transpose_parallel_dealer(int m, int n, int local_m, int local_n, const double * restrict A,
+                           double * restrict B);
 /* The one the solver calls. */
 void transpose_real   (int m, int n, const double * restrict A,
                                      double * restrict B);
