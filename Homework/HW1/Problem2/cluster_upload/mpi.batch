@@ -10,4 +10,4 @@
 
 module load openmpi
 
-mpirun -np 16 --map-by ppr:8:node --bind-to core ./allreduce_test
+mpirun -np 16 --map-by ppr:8:node --bind-to core ./ping_pong

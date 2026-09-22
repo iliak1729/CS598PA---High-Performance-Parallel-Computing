@@ -32,3 +32,22 @@ xlabel('Matrix Size, N',fs,20);
 ylabel('GFLOPS',fs,20);
 title ('Matlab C=AB GFLOPS per Core',fs,20);
 
+% Make sure both arrays are column vectors
+NN = NN(:);
+gc = gc(:);
+
+% Filler time column
+time = zeros(size(NN));
+
+% Combine into [N, time, GFLOPS]
+data = [NN, time, gc];
+
+% Write to benchmark.log
+fid = fopen('matlab_benchmark.log', 'w');
+
+for i = 1:length(NN)
+    fprintf(fid, '%d %.6e %.6f\n', ...
+        NN(i), time(i), gc(i));
+end
+
+fclose(fid);

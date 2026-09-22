@@ -1,7 +1,6 @@
 /*
 From Previous Version:
 Microkernel optimization to do 4x4 block multiplication at a time.
-
 */
 void dgemm_kernel(
     int m,
