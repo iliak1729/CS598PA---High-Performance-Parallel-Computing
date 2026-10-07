@@ -163,7 +163,7 @@ int main(int argc, char **argv)
     /*
      * Perform distributed transpose.
      */
-    transpose_parallel_dealer(
+    transpose_parallel_crystal(
         m, n,
         local_m, local_n,
         A, B

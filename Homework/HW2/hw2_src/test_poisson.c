@@ -38,12 +38,14 @@ int main(int argc, char **argv)
     int ny=Ny-1;
 
     if (poisson_plan_init(&p,nx,ny,Lx,Ly)) return 1;
-
-    F  =(double*)malloc((size_t)nx*ny*sizeof(double));
-    U  =(double*)malloc((size_t)nx*ny*sizeof(double));
-    Uex=(double*)malloc((size_t)nx*ny*sizeof(double));
-    Ud =(double*)malloc((size_t)nx*ny*sizeof(double));
-    Fd =(double*)malloc((size_t)nx*ny*sizeof(double));
+    
+    const int local_nx = p.local_nx;
+    const int local_size = local_nx*ny;
+    F  =(double*)malloc((size_t)local_size*sizeof(double));
+    U  =(double*)malloc((size_t)local_size*sizeof(double));
+    Uex=(double*)malloc((size_t)local_size*sizeof(double));
+    Ud =(double*)malloc((size_t)local_size*sizeof(double));
+    Fd =(double*)malloc((size_t)local_size*sizeof(double));
     if (!F||!U||!Uex||!Ud||!Fd) return 2;
 
     if (msg_rank()==0) {
@@ -51,34 +53,46 @@ int main(int argc, char **argv)
         printf("nx ny   = %d %d      (Nx Ny = %d %d)\n",nx,ny,Nx,Ny);
         printf("hx hy   = %.6e %.6e\n",p.hx,p.hy);
     }
-
+    double global_emax;
     /* ---- test 1: exact inversion of the DISCRETE operator ---------- */
     srand(999);
-    for (i=0; i<nx*ny; ++i) Ud[i]=2.0*((double)rand()/(double)RAND_MAX)-1.0;
+    for (i=0; i<local_size; ++i) Ud[i]=2.0*((double)rand()/(double)RAND_MAX)-1.0;
     poisson_residual_op(&p,Ud,Fd);
     poisson_solve(&p,Fd,U);
     poisson_solve(&p,Fd,U);
     emax=0.0;
-    for (i=0; i<nx*ny; ++i) { e=fabs(U[i]-Ud[i]); if (e>emax) emax=e; }
-    if (msg_rank()==0)
-        printf("\ndiscrete solve  max|U - Uexact_h|      = %.6e   (expect ~roundoff)\n",emax);
+    for (i=0; i<local_size; ++i) { e=fabs(U[i]-Ud[i]); if (e>emax) emax=e; }
+    
+    gmax_double(&emax,&global_emax,1);
+
+    if (msg_rank()==0){
+        printf("\ndiscrete solve  max|U - Uexact_h|      = %.6e   (expect ~roundoff)\n",global_emax);
+        printf("  total     = %.6e\n", p.time_total);
+        printf("  fst       = %.6e\n", p.time_fst);
+        printf("  transpose = %.6e\n", p.time_transpose);
+        printf("  divide    = %.6e\n", p.time_divide);
+    }
 
     /* ---- test 2: continuous solution, expect O(h^2) ---------------- */
     for (j=0; j<ny; ++j) {
         double y=(double)(j+1)*p.hy;
-        for (i=0; i<nx; ++i) {
-            double x=(double)(i+1)*p.hx;
-            F  [i+j*nx]=rhs_f  (x,y,Lx,Ly);
-            Uex[i+j*nx]=exact_u(x,y,Lx,Ly);
+        for (i=0; i<local_nx; ++i) {
+            int global_i =p.x_start + i;
+            double x=(double)(global_i+1)*p.hx;
+            F  [i+j*local_nx]=rhs_f  (x,y,Lx,Ly);
+            Uex[i+j*local_nx]=exact_u(x,y,Lx,Ly);
         }
     }
     poisson_solve(&p,F,U);
     emax=0.0;
-    for (i=0; i<nx*ny; ++i) { e=fabs(U[i]-Uex[i]); if (e>emax) emax=e; }
-    double ep = emax*16;
-    double em = emax/16;
+    for (i=0; i<local_size; ++i) { e=fabs(U[i]-Uex[i]); if (e>emax) emax=e; }
+
+    gmax_double(&emax,&global_emax,1);
+
+    double ep = global_emax*16;
+    double em = global_emax/16;
     if (msg_rank()==0)
-        printf("continuous      max|U - u(x,y)|        = %.6e  %.6e  %.6e  (expect O(h^2))\n",emax,em,ep);
+        printf("continuous      max|U - u(x,y)|        = %.6e  %.6e  %.6e  (expect O(h^2))\n",global_emax,em,ep);
 
     poisson_plan_free(&p);
     free(F); free(U); free(Uex); free(Ud); free(Fd);

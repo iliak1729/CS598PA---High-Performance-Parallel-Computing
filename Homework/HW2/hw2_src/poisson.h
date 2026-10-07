@@ -2,6 +2,8 @@
 #define POISSON_H
 #include "block_fst.h"
 
+#define TRANSPOSE_DEALER  0
+#define TRANSPOSE_CRYSTAL 1
 /*======================================================================
  *  Dirichlet Poisson solver on the rectangle [0,Lx] x [0,Ly]:
  *
@@ -68,7 +70,16 @@ typedef struct {
 
     /* Scratch arrays */
     double *A, *B;
+    
+    /* Timed Data */
+    double time_total;
+    double time_fst;
+    double time_transpose;
+    double time_divide;
 
+    double time_comm;
+    /* Communication*/
+    int transpose_method;
 } poisson_plan;
 
 int  poisson_plan_init(poisson_plan *p,

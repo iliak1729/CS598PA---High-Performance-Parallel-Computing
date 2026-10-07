@@ -90,6 +90,11 @@ void gsum_double(const double *x, double *y, int n)
     MPI_Allreduce(x,y,n,MPI_DOUBLE,MPI_SUM,msg_comm);
 }
 
+void gmax_double(const double *x, double *y, int n)
+{
+    MPI_Allreduce(x,y,n,MPI_DOUBLE,MPI_MAX,msg_comm);
+}
+
 void bcast(void *buf, int nbytes, int root)
 {
     MPI_Bcast(buf,nbytes,MPI_BYTE,root,msg_comm);

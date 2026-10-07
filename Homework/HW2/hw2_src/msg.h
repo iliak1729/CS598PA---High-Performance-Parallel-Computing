@@ -36,6 +36,7 @@ void irecv(int src,  void *buf,       int nbytes, int tag);
 void msgwait(void);
 
 void gsum_double(const double *x, double *y, int n);
+void gmax_double(const double *x, double *y, int n);
 void bcast(void *buf, int nbytes, int root);
 
 #endif

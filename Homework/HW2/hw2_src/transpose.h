@@ -28,7 +28,12 @@ void transpose_blocked(int m, int n, const double * restrict A,
                                      double * restrict B);
 
 void transpose_parallel_dealer(int m, int n, int local_m, int local_n, const double * restrict A,
-                           double * restrict B);
+                           double * restrict B,double *comm_time);
+
+void transpose_parallel_crystal(int m, int n,
+                                int local_m, int local_n,
+                                const double * restrict A,
+                                double * restrict B,double *comm_time);
 /* The one the solver calls. */
 void transpose_real   (int m, int n, const double * restrict A,
                                      double * restrict B);
