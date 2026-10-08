@@ -1,0 +1,30 @@
+Input blocksize, b:
+Input blocksize, b:
+Input blocksize, b:
+
+0 matrix: starta 1803 1804
+
+   1      1804      4.84    8.0744e-01   8.0170e-01   9.9289e-01 b,n,gflops,CPU time, mxm time, ratio
+
+1803 matrix: finalc 1803 1804
+
+Input blocksize, b:
+
+0 matrix: starta 1803 1804
+
+   1      1804      6.48    6.0297e-01   5.9773e-01   9.9130e-01 b,n,gflops,CPU time, mxm time, ratio
+
+1803 matrix: finalc 1803 1804
+
+Input blocksize, b:
+
+0 matrix: starta 1803 1804
+
+   1      1804      6.45    6.0564e-01   6.0013e-01   9.9091e-01 b,n,gflops,CPU time, mxm time, ratio
+
+1803 matrix: finalc 1803 1804
+
+Input blocksize, b:
+Input blocksize, b:
+Input blocksize, b:
+Input blocksize, b:
