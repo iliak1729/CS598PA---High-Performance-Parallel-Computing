@@ -18,6 +18,7 @@
 #include <math.h>
 #include <time.h>
 #include "msg.h"
+#include <Accelerate/Accelerate.h>
 
 #define Aij(a,ld,i,j) ((a)[(size_t)(i) + (size_t)(ld)*(size_t)(j)])
 
@@ -38,9 +39,6 @@ static void randm(double *a, int lda, int m, int n,int mloc, int nloc, int p, in
             // Global row Index
             int global_i = p + P*local_i;
             Aij(a,lda,local_i,local_j) = cos(pi*(double)(global_i+1)*(double)(global_j+1)/(double)m);
-            // printf("Rank %d (p=%d,q=%d): A(%d,%d) = %f\n", p*Q+q, p, q, global_i, global_j, Aij(a,lda,local_i,local_j));
-            // printf("Local indices: local_i=%d, local_j=%d\n", local_i, local_j);
-            // printf("Global indices: global_i=%d, global_j=%d\n", global_i, global_j);
             // Diagonal shift
             if(global_i == global_j) {
                 Aij(a,lda,local_i,local_j) += 5.0;
@@ -48,6 +46,28 @@ static void randm(double *a, int lda, int m, int n,int mloc, int nloc, int p, in
         }
 
     }
+}
+
+/* C = C + A*B, all matrices stored column-major.
+ * A is m x l with leading dimension lda.
+ * B is l x n with leading dimension ldb.
+ * C is m x n with leading dimension ldc.
+ */
+/* C = C + A*B using optimized CBLAS DGEMM from Apple Accelerate.
+ * All matrices are column-major, matching the original Fortran storage.
+ * A is m x l, B is l x n, C is m x n.
+ */
+static void mxma(const double *a, int lda, int m,
+                 const double *b, int ldb, int l,
+                 double *c, int ldc, int n)
+{
+    if (m<=0 || l<=0 || n<=0) return;
+
+    cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+                m, n, l,
+                1.0, a, lda,
+                     b, ldb,
+                1.0, c, ldc);
 }
 
 static void outmat(const double *a, int lda, int m, int n,
