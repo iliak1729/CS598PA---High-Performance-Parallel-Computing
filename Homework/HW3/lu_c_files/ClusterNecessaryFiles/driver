@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+if [ -f logfile ]; then
+    mv logfile log.1
+fi
+
+module load openmpi
+
+
+
+sbatch mpi.batch "$@"

@@ -1,3 +1,4 @@
+// par_factor.c
 /* Block LU factorization test using CBLAS DGEMM, translated from factor.f.
  *
  * Storage is one-dimensional, column-major, so that
@@ -442,7 +443,7 @@ int main(int argc, char **argv)
                                  rank, nprocs);
 
     if (rank == 0) {
-        outmat(global_a, m, m, n, "LU", ierr);
+        outmat(global_a, m, m, n, "Normal_LU", ierr);
 
         free(global_a);
     }

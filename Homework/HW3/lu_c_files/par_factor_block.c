@@ -1,3 +1,4 @@
+// par_factor_block.c
 /* Block LU factorization test using CBLAS DGEMM, translated from factor.f.
  *
  * Storage is one-dimensional, column-major, so that
@@ -22,10 +23,6 @@
 
 #define Aij(a,ld,i,j) ((a)[(size_t)(i) + (size_t)(ld)*(size_t)(j)])
 
-static double cpu_time(void) // No Update Needed
-{
-    return (double)clock() / (double)CLOCKS_PER_SEC;
-}
 // Update randm to do local allocations properly.
 static void randm(double *a, int lda, int m, int n,int mloc, int nloc, int p, int q, int P, int Q) 
 {
@@ -48,27 +45,6 @@ static void randm(double *a, int lda, int m, int n,int mloc, int nloc, int p, in
     }
 }
 
-/* C = C + A*B, all matrices stored column-major.
- * A is m x l with leading dimension lda.
- * B is l x n with leading dimension ldb.
- * C is m x n with leading dimension ldc.
- */
-/* C = C + A*B using optimized CBLAS DGEMM from Apple Accelerate.
- * All matrices are column-major, matching the original Fortran storage.
- * A is m x l, B is l x n, C is m x n.
- */
-static void mxma(const double *a, int lda, int m,
-                 const double *b, int ldb, int l,
-                 double *c, int ldc, int n)
-{
-    if (m<=0 || l<=0 || n<=0) return;
-
-    cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
-                m, n, l,
-                1.0, a, lda,
-                     b, ldb,
-                1.0, c, ldc);
-}
 
 static void outmat(const double *a, int lda, int m, int n,
                    const char *name, int ie)
@@ -174,137 +150,191 @@ static double *gather_matrix(const double *a, int lda,
     return global_a;
 }
 
-static int parallel_factor(double *a, int lda,
-                           int m, int n,
-                           int mloc, int nloc,
-                           int P, int Q,
-                           int p, int q)
+static int parallel_block_factor(double *a, int lda,
+                                int m, int n,
+                                int mloc, int nloc,int bs,
+                                int P, int Q,
+                                int p, int q)
 {
     const int kmax = (m < n) ? m : n;
 
     // ============================================================
     // Workspace
     // ============================================================
-
     double *col = malloc((size_t)(mloc > 0 ? mloc : 1) * sizeof(*col));
     double *row = malloc((size_t)(nloc > 0 ? nloc : 1) * sizeof(*row));
-
-    if (!col || !row) {
+    // Stores a local block for C that is, in size, the number of rows times the block size.
+    double *C = malloc((size_t)(mloc > 0 ? mloc : 1) * (size_t)(bs > 0 ? bs : 1) * sizeof(*C)); 
+    // STores a local block for B that is, in size, the block size times the number of columns.
+    double *B = malloc((size_t)(bs > 0 ? bs : 1) * (size_t)(nloc > 0 ? nloc : 1) * sizeof(*B));
+    if (!col || !row || !C || !B) {
         fprintf(stderr, "Workspace allocation failed\n");
         free(col);
         free(row);
+        free(C);
+        free(B);
         return -1;
     }
+
 
     // ============================================================
     // Gaussian Elimination
     // ============================================================
+    for (int kk=0; kk<kmax; kk+=bs) { // Loop over Blocks
+        // Actual size of diagonal block for smaller blocks if not dividing
+        const int nb = ((kmax -kk) < bs) ? (kmax-kk) : bs;
+        const int kend = kk + nb; // First row/column after block
 
-    for (int k = 0; k < kmax; ++k) {
+        for(int kl =0;kl<nb; ++kl) { // Loop inside block
+            int k = kk + kl;
+            
+            // ============================================================
+            // Get and Broadcast Pivot
+            // ============================================================
+            // Determine pivot processor
+            int pk = k % P;
+            int qk = k % Q;
+            int root = pk * Q + qk;
 
-        // Determine and broadcast pivot
-        int pk = k % P;
-        int qk = k % Q;
-        int root = pk * Q + qk;
-
-        // ============================================================
-        // Broadcast Pivot
-        // ============================================================
-        double pivot = 0.0;
-        if(p == pk && q == qk) {
-            int local_i = k / P;
-            int local_j = k / Q;
-            pivot = Aij(a, lda, local_i, local_j);
-        }
-
-        // Broadcast
-        bcast(&pivot, sizeof(pivot), root);
-
-        // Zero Pivot Check
-        if (pivot == 0.0) {
+            // Get Pivot 
+            double pivot = 0.0;
             if(p == pk && q == qk) {
-                fprintf(stderr, "Zero pivot at k=%d\n", k+1);
+                int local_i = k/P;
+                int local_j = k/Q;
+                pivot = Aij(a,lda,local_i,local_j);
             }
-            free(col); free(row);
-            return k+1;
-        }
-        // ============================================================
-        // Broadcast the Pivot Row
-        // ============================================================
-        // Gather pivot row
-        if(p == pk) { // Processors that contain the pivot row
-            int local_i = k / P;
+
+            // Broadcast
+            bcast(&pivot, sizeof(pivot), root);
+
+            // Zero Pivot Check
+            if (pivot == 0.0) {
+                if(p == pk && q == qk) {
+                    fprintf(stderr, "Zero pivot at k=%d\n", k+1);
+                }
+                free(col); free(row);
+                free(C); free(B);
+                return k+1;
+            }
+            double pivinv = 1.0/pivot;
+
+            // ============================================================
+            // Get and Broadcast Pivot Row
+            // ============================================================
+            if(p == pk) { 
+                int local_i = k / P;
+                for(int local_j = 0; local_j < nloc; ++local_j) {
+                    int global_j = q+Q*local_j;
+                    if(global_j > k){
+                        row[local_j] = Aij(a,lda,local_i,local_j);
+                    } else {
+                        row[local_j] = 0.0;
+                    }
+                }
+            }
+            // Broadcast the pivot row down 
+            int sender = pk * Q + q;
+            int nbytes = (int)((size_t)nloc * sizeof(double));
+            int tag = 100;
+
+            if (p == pk) {// If in pivot row, send to all P in column
+                for(int dest_p = 0 ; dest_p < P; ++dest_p){
+                    if(dest_p != pk) {
+                        int dest_rank = dest_p * Q + q;
+                        isend(dest_rank,row,nbytes,tag);
+                    }
+                }
+            } else { // Else recieve the pivot row
+                irecv(sender,row,nbytes,tag);
+            }
+            msgwait(); 
+            // Once everything is recieved, save the values of row that are needed in B
             for(int local_j = 0; local_j < nloc; ++local_j) {
-                int global_j = q + Q*local_j;
-
-                if(global_j > k) {
-                    row[local_j] = Aij(a, lda, local_i, local_j);
+                int global_j = q+Q*local_j;
+                if(global_j >= kend) {
+                    Aij(B,bs,kl,local_j) = row[local_j];
                 } else {
-                    row[local_j] = 0.0; // Not part of the pivot row
+                    Aij(B,bs,kl,local_j) = 0.0;
                 }
             }
-        }
 
-        // Broadcast the pivot row down
-        int sender = pk * Q + q;
-        int nbytes = (int)((size_t)nloc * sizeof(double));
-        int tag = 100;
+            // ============================================================
+            // Get and Broadcast Multiplier Column
+            // ============================================================
+            if (q == qk) {
+                int local_j = k / Q;
+                for (int local_i = 0; local_i < mloc; ++local_i) {
+                    int global_i = p + P * local_i;
 
-        if (p == pk) { // If p = hat p, then send the pivo row to all P in column q.
-            for(int dest_p = 0; dest_p < P;++dest_p) {
-                if(dest_p != pk) {
-                    int dest_rank = dest_p * Q + q;
-                    isend(dest_rank, row, nbytes, tag);
+                    if(global_i > k) {
+                        col[local_i] = Aij(a,lda,local_i,local_j) * pivinv;
+                        Aij(a,lda,local_i,local_j) = col[local_i];
+                    } else {
+                        col[local_i] = 0.0;
+                    }
                 }
             }
-        } else { // else recieve the pivot row.
-            irecv(sender,row,nbytes,tag);
-        }
-        msgwait(); // Wait for all sends and recieves to complete.
-        // ============================================================
-        // Compute and Broadcast the Multiplier Column
-        // ============================================================
-        // Gather Multipliers
-        if(q == qk) {
-            int local_j = k / Q;
+
+            // Broadcast the multiplier columns across
+            sender = p * Q + qk;
+            nbytes = (int)((size_t)mloc * sizeof(double));
+            tag = 200;
+
+            if(q == qk) { // Post Sends
+                for (int dest_q = 0; dest_q < Q; ++dest_q) {
+                    if(dest_q != qk) {
+                        int dest_rank = p * Q + dest_q;
+                        isend(dest_rank,col,nbytes,tag); 
+                    }
+                }
+            } else { // Recieves
+                irecv(sender,col,nbytes,tag); 
+            }
+            msgwait();
+            // Once everything is recieved, update C
             for(int local_i = 0; local_i < mloc; ++local_i) {
-                int global_i = p + P*local_i;
-
-                if(global_i > k) {
-                    col[local_i] = Aij(a,lda,local_i,local_j) / pivot;
-                    Aij(a,lda,local_i,local_j) = col[local_i];
+                int global_i = p + P * local_i;
+                if(global_i >= kend) {
+                    Aij(C,lda,local_i,kl) = col[local_i];
                 } else {
-                    col[local_i] = 0.0;
+                    Aij(C,lda,local_i,kl) = 0.0;
+                }
+            }
+            // ============================================================
+            // Update Current Block Trailing Matrix Bands - QUESTION
+            // ============================================================
+            for (int local_j = 0; local_j < nloc; ++local_j) {
+                int global_j = q + Q * local_j;
+                if (global_j <= k){
+                    continue;
+                } 
+
+                int imax = (global_j < kend) ? m : kend;
+                for (int local_i = 0; local_i < mloc; ++local_i){
+                    int global_i = p + P * local_i;
+                    if(global_i < imax && global_i > k ) {
+                        Aij(a,lda,local_i,local_j) -= col[local_i] * row[local_j];
+                    }
                 }
             }
         }
-        // Broadcast the multipliers across the row
-        sender = p * Q + qk;
-        nbytes = (int)((size_t)mloc * sizeof(double));
-        tag = 200;
+        // ============================================================
+        // BLAS3 Trailing Matrix Update
+        // ============================================================
+        // Now that we have updated the block bands, we can do the BLAS 3 udpate.
+        // To do this, we need to figure out, in local coordinates, the size of trailing matrix
+        int i0 = (kend > p) ? (kend - p + P - 1) / P : 0;
+        int j0 = (kend > q) ? (kend - q + Q - 1) / Q : 0;
 
-        if (q == qk) { // If p = hat p, then send the pivo row to all P in column q.
-            for(int dest_q = 0; dest_q < Q;++dest_q) {
-                if(dest_q != qk) {
-                    int dest_rank = p * Q + dest_q;
-                    isend(dest_rank, col, nbytes, tag);
-                }
-            }
-        } else { // else recieve the pivot row.
-            irecv(sender,col,nbytes,tag);
-        }
-        msgwait(); // Wait for all sends and recieves to complete.f p = hat p, then send the multipliers to all P in column q.
-        
-        // Update local matrix
-        for(int local_i =0; local_i < mloc; ++local_i) {
-            int global_i = p + P*local_i;
-            for(int local_j = 0; local_j < nloc; ++local_j) {
-                int global_j = q + Q*local_j;
+        int mtrailing = mloc - i0;
+        int ntrailing = nloc - j0;
 
-                if(global_i > k && global_j > k) {
-                    Aij(a,lda,local_i,local_j) -= col[local_i] * row[local_j];
-                }
-            }
+        if(mtrailing > 0 && ntrailing > 0) {
+            cblas_dgemm(CblasColMajor,CblasNoTrans,CblasNoTrans,
+                        mtrailing,ntrailing,nb,
+                        -1.0,&Aij(C,lda,i0, 0),lda,
+                             &Aij(B,bs , 0,j0),bs ,
+                         1.0,&Aij(a,lda,i0,j0),lda);
         }
 
     }
@@ -315,7 +345,8 @@ static int parallel_factor(double *a, int lda,
 
     free(col);
     free(row);
-
+    free(C);
+    free(B);
     return 0;
 }
 
@@ -330,16 +361,16 @@ int main(int argc, char **argv)
 
     // Default parameters
     int m = 1803;
-    int n = 1804;
+    int n = 1803;
     int P = 2;
     int Q = 2;
-
+    int bs = 64 ; // Block Size
     // Read command-line arguments
     if (argc > 1) m = atoi(argv[1]);
     if (argc > 2) n = atoi(argv[2]);
     if (argc > 3) P = atoi(argv[3]);
     if (argc > 4) Q = atoi(argv[4]);
-
+    if (argc > 5) bs = atoi(argv[5]);
     // Validate dimensions
     if (m <= 0 || n <= 0 || P <= 0 || Q <= 0) {
         if (rank == 0)
@@ -356,6 +387,15 @@ int main(int argc, char **argv)
         msg_finalize();
         return EXIT_FAILURE;
     }
+
+    if (bs <= 0) {
+        if(rank == 0) {
+            fprintf(stderr, "Error: Block size must be positive.\n");
+        }
+        msg_finalize();
+        return EXIT_FAILURE;
+    }
+
 
     const int p = rank / Q; // This is the initial row of the processor grid
     const int q = rank % Q; // This is the initial column of the processor grid
@@ -393,7 +433,7 @@ int main(int argc, char **argv)
     // ============================================================
     msg_barrier();
     double t0 = msg_wtime();
-    const int ierr = parallel_factor(a, lda, m, n, mloc, nloc, P, Q, p, q);
+    const int ierr = parallel_block_factor(a, lda, m, n, mloc, nloc,bs, P, Q, p, q);
     
     double local_time = msg_wtime() - t0;
     // ============================================================
@@ -450,8 +490,8 @@ int main(int argc, char **argv)
         printf("Factorization time: %.6f seconds\n", max_time);
         printf("Performance:        %.3f GFLOPS\n", gflops);
         // Machine-readable output
-        printf("RESULT,%d,%d,%d,%d,%.9e,%.9e\n",
-             m, n, P, Q, max_time, gflops);
+        printf("RESULT,%d,%d,%d,%d,%.9e,%.9e,%d\n",
+             m, n, P, Q, max_time, gflops,bs);
     }
     // ============================================================
     // Gather and Output Matrix
@@ -462,7 +502,7 @@ int main(int argc, char **argv)
                                  rank, nprocs);
 
     if (rank == 0) {
-        outmat(global_a, m, m, n, "LU", ierr);
+        outmat(global_a, m, m, n, "BLOCK_LU", ierr);
 
         free(global_a);
     }

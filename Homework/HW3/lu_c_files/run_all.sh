@@ -10,15 +10,15 @@ EXEC="./par_factor"
 LOG_FILE="lu_results_2x2.csv"
 
 # Matrix column counts (m = n + 1)
-N_VALUES=(256 512 1024 2048 4096 8192 16384)
+N_VALUES=(254 510 1022 2046)
 
 # Processor grid configurations
 PROCESSOR_GRIDS=(
-    # "1 1"
-    # "1 2"
+    "1 1"
+    "1 2"
     "2 2"
-    # "2 4"
-    # "4 2"
+    "2 4"
+    "4 2"
 )
 
 # ============================================================
@@ -33,7 +33,7 @@ echo "m,n,P,Q,time,gflops" > "$LOG_FILE"
 
 for n in "${N_VALUES[@]}"; do
 
-    m=$((n + 1))
+    m=$((n))
 
     for grid in "${PROCESSOR_GRIDS[@]}"; do
 

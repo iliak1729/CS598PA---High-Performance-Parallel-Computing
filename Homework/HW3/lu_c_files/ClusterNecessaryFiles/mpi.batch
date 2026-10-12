@@ -1,0 +1,30 @@
+#!/bin/bash
+#SBATCH --account=26fa-cs598pa-eng
+#SBATCH --partition=eng-instruction
+#SBATCH --time=00:30:00
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=8
+#SBATCH --cpus-per-task=1
+#SBATCH --job-name=LU_Benchmark
+#SBATCH --output=logfile
+
+set -euo pipefail
+
+# Load MPI and BLAS modules
+module load openmpi
+# module load aocl   # AMD
+# module load mkl    # Intel
+
+# Prevent BLAS from spawning additional threads
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export BLIS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+
+# Compile on the allocated compute node
+make clean
+make
+
+# Run benchmarks
+bash run_all.sh
+bash run_all_block.sh
