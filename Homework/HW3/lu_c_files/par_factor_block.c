@@ -502,7 +502,7 @@ int main(int argc, char **argv)
                                  rank, nprocs);
 
     if (rank == 0) {
-        outmat(global_a, m, m, n, "BLOCK_LU", ierr);
+        outmat(global_a, m, m, n, "Ver", ierr);
 
         free(global_a);
     }

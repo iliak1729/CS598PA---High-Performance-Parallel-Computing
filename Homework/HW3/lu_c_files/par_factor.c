@@ -443,7 +443,7 @@ int main(int argc, char **argv)
                                  rank, nprocs);
 
     if (rank == 0) {
-        outmat(global_a, m, m, n, "Normal_LU", ierr);
+        outmat(global_a, m, m, n, "VerB", ierr);
 
         free(global_a);
     }

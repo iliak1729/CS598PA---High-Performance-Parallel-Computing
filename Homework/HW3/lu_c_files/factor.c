@@ -181,8 +181,8 @@ static int block_factor(double *a, int lda, int m, int n, int bs,
 
 int main(int argc, char **argv)
 {
-    int m = 1803;
-    int n = 1804;
+    int m = 10;
+    int n = 10;
     int bs;
 
     /* Optional dimensions make larger tests easy:
