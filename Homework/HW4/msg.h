@@ -18,23 +18,24 @@
  * No request handles are exposed to application code.
  */
 
-int    msg_init(int *argc, char ***argv);
-void   msg_finalize(void);
+int msg_init(int *argc, char ***argv);
+void msg_finalize(void);
 
-int    msg_rank (void);
-int    num_ranks(void);
+int msg_rank(void);
+int num_ranks(void);
 
 double msg_wtime(void);
-void   msg_barrier(void);
+void msg_barrier(void);
 
 /* Queue one nonblocking send/recv internally. */
 void isend(int dest, const void *buf, int nbytes, int tag);
-void irecv(int src,  void *buf,       int nbytes, int tag);
+void irecv(int src, void *buf, int nbytes, int tag);
 
 /* Wait for all internally queued nonblocking operations. */
 void msgwait(void);
 
 void gsum_double(const double *x, double *y, int n);
+void gmax_double(const double *x, double *y, int n);
 void bcast(void *buf, int nbytes, int root);
 
 #endif

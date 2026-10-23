@@ -1,18 +1,19 @@
 Hello World from rank 2!
  I have 7 Nodes
 This starts at 16 and ends at 22
-Hello World from rank 2!
+Hello World from rank 3!
+ I have 7 Nodes
+This starts at 24 and ends at 30
+Hello World from rank 1!
+ I have 7 Nodes
+This starts at 8 and ends at 14
 Hello World from rank 0!
  I have 7 Nodes
 This starts at 0 and ends at 6
 Hello World from rank 0!
+SOLVER_TIME 7.2787999999999995e-05
 Hello World from rank 1!
- I have 7 Nodes
-This starts at 8 and ends at 14
-Hello World from rank 1!
-Hello World from rank 3!
- I have 7 Nodes
-This starts at 24 and ends at 30
+Hello World from rank 2!
 Wrote complete solution to Temperature.txt
 
   Rank      i            x        T Numerical            T Exact          Abs Error
@@ -50,4 +51,3 @@ Wrote complete solution to Temperature.txt
      3     28     0.906250   1.0294356219e+00   1.0294119871e+00   2.3634816334e-05
      3     29     0.937500   1.0197826665e+00   1.0197667823e+00   1.5884145085e-05
      3     30     0.968750   1.0099391932e+00   1.0099312127e+00   7.9805008351e-06
-Writing matrix GlobalMatrix (31 x 31) to GlobalMatrix.txt
