@@ -2,6 +2,7 @@
 *DS*
 *log*
 *Temperature*
+*Temperature.txt
 # Below were taken from https://github.com/github/gitignore
 # Prerequisites
 *.d

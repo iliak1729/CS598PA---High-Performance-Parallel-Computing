@@ -1,0 +1,26 @@
+#!/bin/bash
+#SBATCH --account=26fa-cs598pa-eng
+#SBATCH --partition=eng-instruction
+#SBATCH --time=02:00:00
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=64
+#SBATCH --cpus-per-task=1
+#SBATCH --job-name=Tridiag_Benchmark
+#SBATCH --output=logfile
+
+set -euo pipefail
+
+# Load MPI
+module load openmpi
+
+# Prevent unwanted threading
+export OMP_NUM_THREADS=1
+
+# Compile on the allocated compute node
+make clean
+make
+
+# Run benchmarks
+echo "Allocated nodes: $SLURM_JOB_NODELIST"
+echo "Allocated MPI tasks: $SLURM_NTASKS"
+bash run_all.sh
