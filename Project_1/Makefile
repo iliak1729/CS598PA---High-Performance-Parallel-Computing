@@ -43,7 +43,7 @@ $(OBJ_DIR) $(BIN_DIR):
 # ===============================
 # Tests
 # ===============================
-$(TEST_TARGET): tests/test_cg.c $(OBJ_DIR)/cg.o $(OBJ_DIR)/poisson_1D.o $(OBJ_DIR)/poisson_2D.o $(OBJ_DIR)/vtk_writer.o | $(BIN_DIR)
+$(TEST_TARGET): tests/test_cg.c $(OBJ_DIR)/cg.o $(OBJ_DIR)/poisson_1D.o $(OBJ_DIR)/poisson_2D.o $(OBJ_DIR)/poisson_3D.o $(OBJ_DIR)/vtk_writer.o | $(BIN_DIR)
 	@printf "Compiling tests...\n"
 	@$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
