@@ -1,0 +1,5 @@
+      parameter (ln=1240000)
+      parameter (lp=100)
+
+      integer p,np
+      common /msg/ p,np

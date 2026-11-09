@@ -1,0 +1,6 @@
+
+      integer        npq,nid,nio,np,nq,pid,qid,mycomm,wdsize
+      common /mypar/ npq,nid,nio,np,nq,pid,qid,mycomm,wdsize
+
+      real glsc2
+
