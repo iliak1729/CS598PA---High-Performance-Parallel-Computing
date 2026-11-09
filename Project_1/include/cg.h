@@ -11,7 +11,9 @@ typedef struct
     const double *b;
     double *x;
 
-    void (*matvec)(int, const double *, const double *, double *);
+    void *context;
+
+    void (*matvec)(int, const double *, const double *, double *, const void *);
     double (*dot)(const double *, const double *, int);
 
 } CGProblem;
@@ -20,7 +22,7 @@ typedef struct
 double dot(const double *a, const double *b, int n);
 
 void matvec(int n, const double *A,
-            const double *x, double *y);
+            const double *x, double *y, const void *context);
 
 int conjugate_gradient(const CGProblem *problem);
 

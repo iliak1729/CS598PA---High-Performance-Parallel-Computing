@@ -1,0 +1,275 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <assert.h>
+#include "cg.h"
+#include "poisson_1D.h"
+#include "poisson_2D.h"
+#include "vtk_writer.h"
+#define GREEN "\033[0;32m"
+#define RED "\033[0;31m"
+#define RESET "\033[0m"
+
+void test_cg_2x2(void)
+{
+    int n = 2;
+
+    double A[] = {
+        4.0, 1.0,
+        1.0, 3.0};
+
+    double b[] = {1.0, 2.0};
+    double x[] = {0.0, 0.0};
+
+    CGProblem problem = {
+        .n = n,
+        .tol = 1e-10,
+        .maxiter = 1000,
+        .A = A,
+        .b = b,
+        .x = x,
+        .matvec = matvec,
+        .dot = dot};
+
+    int iterations = conjugate_gradient(&problem);
+
+    assert(iterations == 2);
+    assert(fabs(x[0] - 1.0 / 11.0) < 1e-10);
+    assert(fabs(x[1] - 7.0 / 11.0) < 1e-10);
+
+    printf(GREEN "PASS: test_cg_2x2" RESET "\n");
+}
+
+void test_cg_4x4(void)
+{
+    int n = 4;
+
+    double A[] = {
+        4.0, -1.0, 0.0, 0.0,
+        -1.0, 4.0, -1.0, 0.0,
+        0.0, -1.0, 4.0, -1.0,
+        0.0, 0.0, -1.0, 4.0};
+
+    double b[] = {2.0, 4.0, 6.0, 13.0};
+    double x[] = {0.0, 0.0, 0.0, 0.0};
+
+    CGProblem problem = {
+        .n = n,
+        .tol = 1e-10,
+        .maxiter = 1000,
+        .A = A,
+        .b = b,
+        .x = x,
+        .matvec = matvec,
+        .dot = dot};
+
+    int iterations = conjugate_gradient(&problem);
+
+    assert(iterations == 4);
+    assert(fabs(x[0] - 1.0) < 1e-10);
+    assert(fabs(x[1] - 2.0) < 1e-10);
+    assert(fabs(x[2] - 3.0) < 1e-10);
+    assert(fabs(x[3] - 4.0) < 1e-10);
+
+    printf(GREEN "PASS: test_cg_4x4" RESET "\n");
+}
+
+void test_cg_poisson_1D(void)
+{
+    int n = 4;
+
+    double dx = 0.2;
+    double A[] = {dx};
+
+    double b[] = {0.0, 0.0, 0.0, 125.0};
+    double x[] = {0.0, 0.0, 0.0, 0.0};
+
+    double x_exact[] = {1.0, 2.0, 3.0, 4.0};
+
+    CGProblem problem = {
+        .n = n,
+        .tol = 1e-10,
+        .maxiter = 1000,
+        .A = A,
+        .b = b,
+        .x = x,
+        .matvec = poisson_1D_matvec,
+        .dot = dot};
+
+    int iterations = conjugate_gradient(&problem);
+
+    assert(iterations >= 0);
+
+    for (int i = 0; i < n; ++i)
+    {
+        assert(fabs(x[i] - x_exact[i]) < 1e-10);
+    }
+
+    printf(GREEN "PASS: test_cg_poisson_1D" RESET "\n");
+}
+
+void test_cg_poisson_2D(void)
+{
+    int nx = 2;
+    int ny = 2;
+    int n = nx * ny;
+
+    double dx = 1.0 / (nx + 1);
+    double dy = 1.0 / (ny + 1);
+
+    double A[] = {dx, dy};
+
+    double b[] = {-9.0, 27.0, 63.0, 99.0};
+    double x[] = {0.0, 0.0, 0.0, 0.0};
+    double x_exact[] = {1.0, 2.0, 3.0, 4.0};
+
+    Poisson2DContext grid = {
+        .nx = nx,
+        .ny = ny};
+
+    CGProblem problem = {
+        .n = n,
+        .tol = 1e-10,
+        .maxiter = 1000,
+        .A = A,
+        .b = b,
+        .x = x,
+        .context = &grid,
+        .matvec = poisson_2D_matvec,
+        .dot = dot};
+
+    double Ax[4];
+
+    int iterations = conjugate_gradient(&problem);
+
+    write_vtk_2D("results/poisson_2D.vtk",
+                 nx, ny, dx, dy, x);
+    assert(iterations >= 0);
+
+    for (int i = 0; i < n; ++i)
+    {
+        assert(fabs(x[i] - x_exact[i]) < 1e-10);
+    }
+
+    printf(GREEN "PASS: test_cg_poisson_2D" RESET "\n");
+}
+
+void test_cg_poisson_2D_heat(void)
+{
+    // ========================================================
+    // User-defined parameters
+    // ========================================================
+    int nx = 128;
+    int ny = 128;
+
+    double Lx = 1.0;
+    double Ly = 1.0;
+
+    double alpha = -1.0;
+
+    double tol = 1e-10;
+    int maxiter = 10000;
+
+    // ========================================================
+    // Grid setup
+    // ========================================================
+    int n = nx * ny;
+
+    double dx = Lx / (nx + 1);
+    double dy = Ly / (ny + 1);
+
+    double A[] = {dx, dy};
+
+    Poisson2DContext grid = {
+        .nx = nx,
+        .ny = ny};
+
+    // ========================================================
+    // Allocate memory
+    // ========================================================
+    double *b = malloc(n * sizeof(double));
+    double *x = calloc(n, sizeof(double));
+
+    assert(b != NULL);
+    assert(x != NULL);
+
+    // ========================================================
+    // Initialize RHS: -alpha
+    // ========================================================
+    for (int i = 0; i < n; ++i)
+    {
+        b[i] = -alpha;
+    }
+
+    // ========================================================
+    // Configure CG solver
+    // ========================================================
+    CGProblem problem = {
+        .n = n,
+        .tol = tol,
+        .maxiter = maxiter,
+        .A = A,
+        .b = b,
+        .x = x,
+        .context = &grid,
+        .matvec = poisson_2D_matvec,
+        .dot = dot};
+
+    // ========================================================
+    // Solve
+    // ========================================================
+    int iterations = conjugate_gradient(&problem);
+
+    assert(iterations >= 0);
+
+    printf("2D Poisson heat problem:\n");
+    printf("  nx, ny     = %d, %d\n", nx, ny);
+    printf("  Lx, Ly     = %.6f, %.6f\n", Lx, Ly);
+    printf("  dx, dy     = %.6e, %.6e\n", dx, dy);
+    printf("  alpha      = %.6f\n", alpha);
+    printf("  iterations = %d\n", iterations);
+
+    // ========================================================
+    // Solution statistics
+    // ========================================================
+    double umin = x[0];
+    double umax = x[0];
+
+    for (int i = 1; i < n; ++i)
+    {
+        if (x[i] < umin)
+            umin = x[i];
+
+        if (x[i] > umax)
+            umax = x[i];
+    }
+
+    printf("  u_min      = %.12e\n", umin);
+    printf("  u_max      = %.12e\n", umax);
+
+    // ========================================================
+    // Write VTK
+    // ========================================================
+    write_vtk_2D("results/poisson_2D_heat.vtk",
+                 nx, ny, dx, dy, x);
+
+    // ========================================================
+    // Cleanup
+    // ========================================================
+    free(b);
+    free(x);
+
+    printf(GREEN "PASS: test_cg_poisson_2D_heat" RESET "\n");
+}
+
+int main(void)
+{
+    test_cg_2x2();
+    test_cg_4x4();
+    test_cg_poisson_1D();
+    test_cg_poisson_2D();
+    test_cg_poisson_2D_heat();
+    printf(GREEN "All tests passed!" RESET "\n");
+    return 0;
+}

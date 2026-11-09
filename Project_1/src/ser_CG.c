@@ -24,6 +24,7 @@ int main(void)
         .A = A,
         .b = b,
         .x = x,
+        .context = NULL,
 
         .matvec = matvec,
         .dot = dot};

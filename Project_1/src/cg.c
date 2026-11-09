@@ -17,8 +17,9 @@ double dot(const double *a, const double *b, int n)
 
 // Matrix Vector Multiplication
 // y= A*x
-void matvec(int n, const double *A, const double *x, double *y)
+void matvec(int n, const double *A, const double *x, double *y, const void *context)
 {
+    (void)context;
     for (int i = 0; i < n; ++i)
     {
         y[i] = 0.0;
@@ -61,12 +62,15 @@ int conjugate_gradient(const CGProblem *problem)
         x[i] = 0.0;
     }
     // Initial Residual - Store matrix multiplication in Ap for now
-    problem->matvec(n, A, x, Ap);
+    problem->matvec(n, A, x, Ap, problem->context);
+    double initial_res_mag = 0.0;
     for (int i = 0; i < n; i++)
     {
         r[i] = b[i] - Ap[i];
         p[i] = r[i];
+        initial_res_mag = initial_res_mag + r[i] * r[i];
     }
+    initial_res_mag = sqrt(initial_res_mag);
     // CG Loop
     double alpha = 0.0;
     double beta = 0.0;
@@ -74,7 +78,7 @@ int conjugate_gradient(const CGProblem *problem)
     for (int j = 0; j < maxiter; ++j)
     {
         // Compute Ap
-        problem->matvec(n, A, p, Ap);
+        problem->matvec(n, A, p, Ap, problem->context);
         // Alpha Calc
         alpha = problem->dot(r, r, n) / problem->dot(Ap, p, n);
         // Updates
@@ -96,7 +100,7 @@ int conjugate_gradient(const CGProblem *problem)
             p[i] = r[i] + beta * p[i];
         }
         // Check Residual Magnitude
-        sumR = sqrt(sumR);
+        sumR = sqrt(sumR) / initial_res_mag;
         if (sumR <= tol)
         {
             free(r);
