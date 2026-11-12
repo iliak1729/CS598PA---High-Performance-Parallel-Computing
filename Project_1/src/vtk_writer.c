@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "vtk_writer.h"
+#include "poisson_3D.h"
 
 void write_vtk_2D(const char *filename,
                   int nx, int ny,
@@ -57,7 +58,8 @@ void write_vtk_2D(const char *filename,
 }
 
 void write_vtk_3D(const char *filename, int nx, int ny, int nz,
-                  double dx, double dy, double dz, const double *u)
+                  double dx, double dy, double dz, const double *u,
+                  const PoissonBC bcs[NUM_FACES])
 {
     FILE *fp = fopen(filename, "w");
 
@@ -84,6 +86,7 @@ void write_vtk_3D(const char *filename, int nx, int ny, int nz,
     fprintf(fp, "POINT_DATA %d\n", Nx * Ny * Nz);
     fprintf(fp, "SCALARS u double 1\n");
     fprintf(fp, "LOOKUP_TABLE default\n");
+
     for (int k = 0; k < Nz; ++k)
     {
         for (int j = 0; j < Ny; ++j)
@@ -91,6 +94,10 @@ void write_vtk_3D(const char *filename, int nx, int ny, int nz,
             for (int i = 0; i < Nx; ++i)
             {
                 double value = 0.0;
+
+                double x = i * dx;
+                double y = j * dy;
+                double z = k * dz;
 
                 // Interior points
                 if (i > 0 && i < Nx - 1 &&
@@ -100,10 +107,44 @@ void write_vtk_3D(const char *filename, int nx, int ny, int nz,
                     int iprime = i - 1;
                     int jprime = j - 1;
                     int kprime = k - 1;
-                    int l = kprime * nx * ny + jprime * nx + iprime;
-                    // printf("L = %d\n", l);
+
+                    int l = kprime * nx * ny +
+                            jprime * nx + iprime;
+
                     value = u[l];
-                    // printf("Value = %.15e\n", value);
+                }
+
+                // Dirichlet boundary points
+                else
+                {
+                    BoundaryFace face;
+
+                    // Priority: X faces, then Y, then Z
+                    if (i == 0)
+                        face = XMIN;
+                    else if (i == Nx - 1)
+                        face = XMAX;
+                    else if (j == 0)
+                        face = YMIN;
+                    else if (j == Ny - 1)
+                        face = YMAX;
+                    else if (k == 0)
+                        face = ZMIN;
+                    else
+                        face = ZMAX;
+
+                    if (bcs[face].type != BC_DIRICHLET ||
+                        bcs[face].function == NULL)
+                    {
+                        fprintf(stderr,
+                                "Invalid Dirichlet BC on face %d\n",
+                                face);
+                        fclose(fp);
+                        return;
+                    }
+
+                    value = bcs[face].function(
+                        x, y, z, bcs[face].context);
                 }
 
                 fprintf(fp, "%.15e\n", value);

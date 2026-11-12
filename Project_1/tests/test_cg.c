@@ -300,8 +300,8 @@ void test_cg_poisson_3D(void)
     printf("PROBLEM STARTED\n");
     int iterations = conjugate_gradient(&problem);
     printf("PROBLEM SOLVED\n");
-    write_vtk_3D("results/poisson_3D.vtk",
-                 nx, ny, nz, dx, dy, dz, x);
+    // write_vtk_3D("results/poisson_3D.vtk",
+    //              nx, ny, nz, dx, dy, dz, x);
 
     // assert(iterations >= 0);
 
@@ -332,6 +332,18 @@ void test_cg_poisson_3D_heat(void)
     int maxiter = 100000;
 
     // ========================================================
+    // Dirichlet boundary values
+    // ========================================================
+    double bc_xmin = 1.0;
+    double bc_xmax = 0.0;
+
+    double bc_ymin = 0.0;
+    double bc_ymax = 0.0;
+
+    double bc_zmin = 0.0;
+    double bc_zmax = 0.0;
+
+    // ========================================================
     // Grid setup
     // ========================================================
     int n = nx * ny * nz;
@@ -345,6 +357,26 @@ void test_cg_poisson_3D_heat(void)
         .nx = nx,
         .ny = ny,
         .nz = nz};
+
+    // ========================================================
+    // Initialize boundary conditions
+    // ========================================================
+    double *bc_values[NUM_FACES] = {
+        &bc_xmin,
+        &bc_xmax,
+        &bc_ymin,
+        &bc_ymax,
+        &bc_zmin,
+        &bc_zmax};
+
+    for (int face = 0; face < NUM_FACES; ++face)
+    {
+        grid.bcs[face].type = BC_DIRICHLET;
+        grid.bcs[face].face = (BoundaryFace)face;
+        grid.bcs[face].function = bc_constant;
+        grid.bcs[face].context = bc_values[face];
+        grid.bcs[face].neighbor_rank = -1;
+    }
 
     // ========================================================
     // Allocate memory
@@ -362,6 +394,15 @@ void test_cg_poisson_3D_heat(void)
     {
         b[i] = -alpha;
     }
+
+    // ========================================================
+    // Apply boundary conditions
+    // ========================================================
+    poisson_3D_apply_boundary_conditions(
+        nx, ny, nz,
+        dx, dy, dz,
+        b,
+        grid.bcs);
 
     // ========================================================
     // Configure CG solver
@@ -412,8 +453,8 @@ void test_cg_poisson_3D_heat(void)
     // ========================================================
     // Write VTK
     // ========================================================
-    write_vtk_3D("results/poisson_3D_heat.vtk",
-                 nx, ny, nz, dx, dy, dz, x);
+    write_vtk_3D(
+        "results/poisson_3D_heat.vtk", nx, ny, nz, dx, dy, dz, x, grid.bcs);
 
     // ========================================================
     // Cleanup
