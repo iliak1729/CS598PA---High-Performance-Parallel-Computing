@@ -53,119 +53,88 @@ print(f"Loaded {len(N)} simulations")
 print("Grid resolutions:", np.unique(N))
 print("MPI ranks:", np.unique(ranks))
 print("Statuses:", np.unique(status))
-
-
 # ============================================================
-# Grid Convergence Study
+# Grid Convergence - Multiple MPI Rank Counts
 # ============================================================
 
-# Only include successful simulations
-mask = (status == "ok")
+fig, ax = plt.subplots(figsize=(10, 7))
 
-# Create a dataframe with valid results
-convergence_data = pd.DataFrame({
-    "N": N[mask],
-    "h": h[mask],
-    "rms_error": rms_error[mask]
-})
+rank_counts = np.unique(ranks[status == "ok"])
 
-# Average RMS error across MPI decompositions
-# (These should be nearly identical)
-convergence = (
-    convergence_data
-    .groupby("N", as_index=False)
-    .agg({
-        "h": "mean",
-        "rms_error": "mean"
+colors = plt.get_cmap("tab10")
+
+for idx, P in enumerate(rank_counts):
+
+    mask = (ranks == P) & (status == "ok")
+
+    # Multiple decompositions may exist for the same N and P
+    # Average their RMS errors
+    subset = pd.DataFrame({
+        "N": N[mask],
+        "h": h[mask],
+        "error": rms_error[mask]
     })
-    .sort_values("h", ascending=False)
-)
 
-h_conv = convergence["h"].to_numpy()
-error_conv = convergence["rms_error"].to_numpy()
-N_conv = convergence["N"].to_numpy()
-
-# ============================================================
-# Calculate Observed Convergence Order
-# ============================================================
-
-orders = np.log(error_conv[:-1] / error_conv[1:]) / \
-         np.log(h_conv[:-1] / h_conv[1:])
-
-# Overall convergence order
-p = np.polyfit(np.log(h_conv), np.log(error_conv), 1)[0]
-
-print("\nGrid Convergence Results")
-print("------------------------------------------------")
-print(f"{'N':>8} {'h':>14} {'RMS Error':>16} {'Order':>10}")
-
-for i in range(len(N_conv)):
-    order_str = f"{orders[i-1]:.4f}" if i > 0 else "---"
-
-    print(
-        f"{N_conv[i]:8d} "
-        f"{h_conv[i]:14.6e} "
-        f"{error_conv[i]:16.6e} "
-        f"{order_str:>10}"
+    convergence = (
+        subset.groupby("N", as_index=False)
+        .agg({"h": "mean", "error": "mean"})
+        .sort_values("h", ascending=False)
     )
 
-print("------------------------------------------------")
-print(f"Overall observed convergence order: {p:.4f}")
+    if convergence.empty:
+        continue
+    linewidth_value=7.5 - 0.5 * idx
+
+    ax.loglog(
+        convergence["h"],
+        convergence["error"],
+        marker="o",
+        linestyle="-",
+        linewidth=linewidth_value,
+        markersize=6,
+        color=colors(idx % 10),
+        label=f"{P} MPI ranks"
+    )
 
 # ============================================================
-# Second-Order Reference Line
+# Second-Order Reference
 # ============================================================
 
-# Anchor reference line at coarsest resolution
-reference = error_conv[0] * (h_conv / h_conv[0])**2
+valid = (status == "ok") & (rms_error > 0)
 
-# ============================================================
-# Plot
-# ============================================================
+h_ref = np.sort(np.unique(h[valid]))
 
-fig, ax = plt.subplots(figsize=(9, 7))
+# Anchor reference at the largest grid spacing
+h0 = h_ref[-1]
+e0 = np.mean(rms_error[valid & np.isclose(h, h0)])
+
+reference = e0 * (h_ref / h0)**2
 
 ax.loglog(
-    h_conv,
-    error_conv,
-    "o-",
-    color="xkcd:royal blue",
-    linewidth=2.5,
-    markersize=9,
-    label="Numerical RMS Error"
-)
-
-ax.loglog(
-    h_conv,
+    h_ref,
     reference,
-    "--",
-    color="xkcd:dark orange",
+    "k--",
     linewidth=2.5,
-    label=r"Second-order reference, $O(h^2)$"
+    label=r"$O(h^2)$"
 )
 
-# Label each point with its resolution
-for n, hi, err in zip(N_conv, h_conv, error_conv):
-    ax.annotate(
-        f"N={n}",
-        (hi, err),
-        xytext=(7, -12),
-        textcoords="offset points",
-        fontsize=10
-    )
+# ============================================================
+# Formatting
+# ============================================================
 
 ax.set_xlabel(r"Grid spacing, $h$", fontsize=14)
 ax.set_ylabel(r"RMS Error", fontsize=14)
-
-ax.set_title(
-    rf"3D Poisson Solver — Grid Convergence ($p={p:.3f}$)",
-    fontsize=16
-)
+ax.set_title("3D Poisson Solver - Grid Convergence", fontsize=16)
 
 ax.grid(True, which="major", linestyle="-", alpha=0.5)
 ax.grid(True, which="minor", linestyle=":", alpha=0.25)
 
-ax.legend(fontsize=12)
+ax.legend(
+    loc="center left",
+    bbox_to_anchor=(1.02, 0.5),
+    fontsize=11,
+    title="Processor Count"
+)
 
 ax.tick_params(axis="both", which="major", labelsize=12)
 
