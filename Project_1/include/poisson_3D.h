@@ -6,9 +6,10 @@ typedef enum
     BC_COMM,
     BC_NEUMANN
 } BoundaryType;
+
 typedef enum
 {
-    XMIN,
+    XMIN = 0,
     XMAX,
     YMIN,
     YMAX,

@@ -3,6 +3,7 @@
 #include <math.h>
 #include "poisson_3D.h"
 #include <mpi.h>
+#include "poisson_3D_comm.h"
 
 static MPI_Comm cart_comm = MPI_COMM_NULL;
 static int rank_id;
@@ -14,7 +15,7 @@ static int neighbors[6];
 #define IDX(i, j, k) \
     (((size_t)(k) * (ny + 2) + (j)) * (nx + 2) + (i))
 
-void comm_setup(int *rank, int *size, int pdmins[3], int pcoords[3], int px, int py, int pz)
+void comm_setup(int *rank, int *size, int pdims[3], int pcoords[3], int px, int py, int pz)
 {
     MPI_Init(NULL, NULL);
 
@@ -37,7 +38,7 @@ void comm_setup(int *rank, int *size, int pdmins[3], int pcoords[3], int px, int
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
 
-    int periods[3] = {0, 0, 0}
+    int periods[3] = {0, 0, 0};
 
     MPI_Cart_create(MPI_COMM_WORLD, 3, dims, periods, 0, &cart_comm);
 
@@ -94,7 +95,7 @@ double comm_wtime(void) { return MPI_Wtime(); }
 
 void comm_sync(void) { MPI_Barrier(cart_comm); }
 
-void update_bdry(double *u, int nx, int ny, int nz)
+void update_boudnary(double *u, int nx, int ny, int nz)
 {
     int counts[6] = {
         ny * nz, // XMIN

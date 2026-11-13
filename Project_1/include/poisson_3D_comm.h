@@ -1,15 +1,7 @@
 #ifndef POISSON_3D_COMM_H
 #define POISSON_3D_COMM_H
 
-enum
-{
-    XMIN = 0,
-    XMAX,
-    YMIN,
-    YMAX,
-    ZMIN,
-    YMAX
-};
+#include "poisson_3D.h"
 
 void comm_setup(int *rank, int *size, int pdmins[3], int pcoords[3], int px, int py, int pz);
 
@@ -19,7 +11,7 @@ double comm_sum(double value);
 
 double comm_max(double value);
 
-void comm_wtime(void);
+double comm_wtime(void);
 
 void comm_sync(void);
 

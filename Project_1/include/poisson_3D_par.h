@@ -3,9 +3,8 @@
 
 typedef struct
 {
-    int nx, ny, nz // Local Dimensions
-        int global_nx,
-        global_ny, global_nz;
+    int nx, ny, nz; // Local Dimensions
+    int global_nx, global_ny, global_nz;
 
     int start_x, start_y, start_z;
     double dx, dy, dz;

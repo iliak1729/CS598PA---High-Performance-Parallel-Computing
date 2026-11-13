@@ -1,0 +1,29 @@
+#!/bin/bash
+#SBATCH --account=26fa-cs598pa-eng
+#SBATCH --partition=eng-instruction
+#SBATCH --time=02:00:00
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=64
+#SBATCH --cpus-per-task=1
+#SBATCH --job-name=Poisson3D_Benchmark
+#SBATCH --output=poisson3d_%j.log
+
+set -euo pipefail
+
+module load openmpi
+
+export OMP_NUM_THREADS=1
+
+echo "======================================"
+echo "3D Poisson MPI Benchmark"
+echo "======================================"
+echo "Nodes: $SLURM_JOB_NODELIST"
+echo "Tasks: $SLURM_NTASKS"
+echo "======================================"
+
+make clean
+make
+
+bash run_all.sh
+
+echo "Benchmark completed."
